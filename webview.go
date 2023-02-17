@@ -4,8 +4,8 @@ package webview
 #cgo linux openbsd freebsd netbsd CXXFLAGS: -DWEBVIEW_GTK -std=c++11
 #cgo linux openbsd freebsd netbsd pkg-config: gtk+-3.0 webkit2gtk-4.0
 
-#cgo darwin CXXFLAGS: -DWEBVIEW_COCOA -std=c++11
-#cgo darwin LDFLAGS: -framework WebKit
+#cgo darwin CXXFLAGS: -DWEBVIEW_COCOA -std=c++17 -Wno-deprecated-declarations
+#cgo darwin LDFLAGS: -framework WebKit -framework Cocoa
 
 #cgo windows CXXFLAGS: -DWEBVIEW_EDGE -std=c++17
 #cgo windows LDFLAGS: -static -ladvapi32 -lole32 -lshell32 -lshlwapi -luser32 -lversion
@@ -17,6 +17,7 @@ package webview
 
 void CgoWebViewDispatch(webview_t w, uintptr_t arg);
 void CgoWebViewBind(webview_t w, const char *name, uintptr_t index);
+
 */
 import "C"
 import (
@@ -111,7 +112,19 @@ type WebView interface {
 	// f must return either value and error or just error
 	Bind(name string, f interface{}) error
 
+	GetTitle() string
 	Hide()
+	Show()
+	SetBorderless()
+	IsMaximized() bool
+	Maximize()
+	Minimize()
+	IsVisible() bool
+	SetFullScreen()
+	ExitFullScreen()
+	IsFullScreen() bool
+	SetIcon(icon string)
+	SetAlwaysOnTop(onTop bool)
 }
 
 type webview struct {
@@ -201,10 +214,47 @@ func (w *webview) Eval(js string) {
 	C.webview_eval(w.w, s)
 }
 
+func (w *webview) GetTitle() string {
+	s := C.webview_get_title(w.w)
+	return C.GoString(s)
+}
+
 func (w *webview) Hide() {
-	s := C.CString(js)
-	defer C.free(unsafe.Pointer(s))
 	C.webview_hide(w.w)
+}
+func (w *webview) Show() {
+	C.webview_show(w.w)
+}
+func (w *webview) SetBorderless() {
+	C.webview_set_borderless(w.w)
+}
+func (w *webview) IsMaximized() bool {
+	//C.is_maximized(w.w)
+	return true
+}
+func (w *webview) Maximize() {
+
+}
+func (w *webview) Minimize() {
+
+}
+func (w *webview) IsVisible() bool {
+	return true
+}
+func (w *webview) SetFullScreen() {
+
+}
+func (w *webview) ExitFullScreen() {
+
+}
+func (w *webview) IsFullScreen() bool {
+	return true
+}
+func (w *webview) SetIcon(icon string) {
+
+}
+func (w *webview) SetAlwaysOnTop(onTop bool) {
+
 }
 
 func (w *webview) Dispatch(f func()) {

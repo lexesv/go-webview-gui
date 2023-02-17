@@ -1,6 +1,6 @@
 package main
 
-import "github.com/webview/webview"
+import "github.com/lexesv/webview"
 
 const html = `<button id="increment">Tap me</button>
 <div>You tapped <span id="count">0</span> time(s).</div>

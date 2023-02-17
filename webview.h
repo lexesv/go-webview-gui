@@ -89,6 +89,7 @@ typedef struct {
     char build_metadata[48];
 } webview_version_info_t;
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -159,8 +160,14 @@ WEBVIEW_API void webview_init(webview_t w, const char *js);
 // receive notifications about the results of the evaluation.
 WEBVIEW_API void webview_eval(webview_t w, const char *js);
 
-// Hide window
-WEBVIEW_API void webview_hide();
+// Additional methods
+WEBVIEW_API void webview_hide(webview_t w);
+
+WEBVIEW_API void webview_show(webview_t w);
+
+WEBVIEW_API void webview_set_borderless(webview_t w);
+
+WEBVIEW_API const char *webview_get_title(webview_t w);
 
 // Binds a native C callback so that it will appear under the given name as a
 // global JavaScript function. Internally it uses webview_init(). Callback
@@ -622,6 +629,17 @@ public:
   void hide() {
       gtk_widget_hide(m_webview);
   }
+  void show() {
+      gtk_widget_show(m_webview);
+  }
+  void set_borderless {
+      gtk_window_set_decorated(GTK_WINDOW(m_webview), false);
+  }
+  const char* get_title() {
+    const char*  title=gtk_window_get_title(GTK_WINDOW(m_window));
+    return title;
+  }
+
 
 private:
   virtual void on_message(const std::string &msg) = 0;
@@ -749,9 +767,18 @@ public:
     auto app = get_shared_application();
     objc::msg_send<void>(app, "terminate:"_sel, nullptr);
   }
-  void run() {
+  /*void run() {
     auto app = get_shared_application();
     objc::msg_send<void>(app, "run"_sel);
+  }*/
+  void run() {
+    id app = ((id(*)(id, SEL))objc_msgSend)("NSApplication"_cls,
+                                            "sharedApplication"_sel);
+    dispatch([&]() {
+      ((void (*)(id, SEL, BOOL))objc_msgSend)(
+          app, "activateIgnoringOtherApps:"_sel, 1);
+    });
+    ((void (*)(id, SEL))objc_msgSend)(app, "run"_sel);
   }
   void dispatch(std::function<void()> f) {
     dispatch_async_f(dispatch_get_main_queue(), new dispatch_fn_t(f),
@@ -827,9 +854,36 @@ public:
   }
 
   void hide() {
-    ((void (*)(id, SEL, bool))objc_msgSend)((id) m_webview,
-                "setIsVisible:"_sel, false);
+    /*((void (*)(id, SEL, bool))objc_msgSend)((id) m_window,
+                "setIsVisible:"_sel, false);*/
+    objc::msg_send<void>(m_window, "setIsVisible:"_sel, false);
   }
+
+   void show() {
+    objc::msg_send<void>(m_window, "setIsVisible:"_sel, true);
+  }
+
+  void set_borderless() {
+      unsigned long windowStyleMask = ((unsigned long (*)(id, SEL))objc_msgSend)(
+        (id) m_window, "styleMask"_sel);
+    windowStyleMask &= ~webview::detail::NSWindowStyleMaskTitled;
+    ((void (*)(id, SEL, int))objc_msgSend)((id) m_window,
+            "setStyleMask:"_sel, windowStyleMask);
+  }
+  /*void get_title(const std::string &title) {
+    title = std::string(
+      ((const char *(*)(id, SEL))objc_msgSend)(
+        ((id(*)(id, SEL))objc_msgSend)(m_window, "title"_sel)
+      , "UTF8String"_sel)
+    );
+  }*/
+  const char* get_title() {
+    const char* title = ((const char *(*)(id, SEL))objc_msgSend)(
+        ((id(*)(id, SEL))objc_msgSend)(m_window, "title"_sel)
+      , "UTF8String"_sel);
+    return title;
+  }
+
 
 private:
   virtual void on_message(const std::string &msg) = 0;
@@ -840,8 +894,9 @@ private:
     auto cls = objc_allocateClassPair((Class) "NSResponder"_cls,
                                       "WebviewAppDelegate", 0);
     class_addProtocol(cls, objc_getProtocol("NSTouchBarProvider"));
-    class_addMethod(cls, "applicationShouldTerminateAfterLastWindowClosed:"_sel,
-                    (IMP)(+[](id, SEL, id) -> BOOL { return 1; }), "c@:@");
+    /*class_addMethod(cls, "applicationShouldTerminateAfterLastWindowClosed:"_sel,
+                    (IMP)(+[](id, SEL, id) -> BOOL { return 1; }), "c@:@");*/
+
     // If the library was not initialized with an existing window then the user
     // is likely managing the application lifecycle and we would not get the
     // "applicationDidFinishLaunching:" message and therefore do not need to
@@ -2018,6 +2073,24 @@ public:
   void hide() {
       ShowWindow(m_webview, SW_HIDE);
   }
+  void show() {
+      ShowWindow(m_webview, SW_SHOW);
+  }
+  void set_borderless() {
+      DWORD currentStyle = GetWindowLong(m_webview, GWL_STYLE);
+      currentStyle &= ~(WS_CAPTION | WS_THICKFRAME);
+      SetWindowLong(m_webview, GWL_STYLE, currentStyle);
+      SetWindowPos(m_webview, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE |
+                    SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+  }
+
+  const char* get_title() {
+    int len = GetWindowTextLength(hwnd);
+    const char* title;
+    //title.reserve(len + 1);
+    GetWindowText(hwnd, const_cast<char*>(title), len);
+    return title;
+  }
 
 private:
   bool embed(HWND wnd, bool debug, msg_cb_t cb) {
@@ -2280,9 +2353,23 @@ WEBVIEW_API void webview_eval(webview_t w, const char *js) {
   static_cast<webview::webview *>(w)->eval(js);
 }
 
+
 WEBVIEW_API void webview_hide(webview_t w) {
   static_cast<webview::webview *>(w)->hide();
 }
+
+WEBVIEW_API void webview_show(webview_t w) {
+  static_cast<webview::webview *>(w)->show();
+}
+
+WEBVIEW_API void webview_set_borderless(webview_t w) {
+  static_cast<webview::webview *>(w)->set_borderless();
+}
+
+WEBVIEW_API const char * webview_get_title(webview_t w) {
+  return static_cast<webview::webview *>(w)->get_title();
+}
+
 
 WEBVIEW_API void webview_bind(webview_t w, const char *name,
                               void (*fn)(const char *seq, const char *req,
