@@ -112,13 +112,15 @@ type WebView interface {
 	// f must return either value and error or just error
 	Bind(name string, f interface{}) error
 
-	GetTitle() string
-	Hide()
-	Show()
-	SetBorderless()
+	GetTitle() string //+
+	Hide()            //+
+	Show()            //+
+	SetBorderless()   //+
 	IsMaximized() bool
 	Maximize()
+	Unmaximize()
 	Minimize()
+	Unminimize()
 	IsVisible() bool
 	SetFullScreen()
 	ExitFullScreen()
@@ -222,22 +224,42 @@ func (w *webview) GetTitle() string {
 func (w *webview) Hide() {
 	C.webview_hide(w.w)
 }
+
 func (w *webview) Show() {
 	C.webview_show(w.w)
 }
+
 func (w *webview) SetBorderless() {
 	C.webview_set_borderless(w.w)
 }
+
 func (w *webview) IsMaximized() bool {
-	//C.is_maximized(w.w)
-	return true
+	if C.webview_is_maximized(w.w) != 0 {
+		return true
+	}
+	return false
 }
+
 func (w *webview) Maximize() {
-
+	if !w.IsMaximized() {
+		C.webview_maximize(w.w)
+	}
 }
+
+func (w *webview) Unmaximize() {
+	if w.IsMaximized() {
+		C.webview_unmaximize(w.w)
+	}
+}
+
 func (w *webview) Minimize() {
-
+	C.webview_minimize(w.w)
 }
+
+func (w *webview) Unminimize() {
+	C.webview_unminimize(w.w)
+}
+
 func (w *webview) IsVisible() bool {
 	return true
 }

@@ -2,9 +2,8 @@ package main
 
 import "C"
 import (
-	"fmt"
-
 	"github.com/lexesv/go-webview-gui"
+	"github.com/lexesv/go-webview-gui/dialog"
 	"github.com/lexesv/go-webview-gui/systray"
 )
 
@@ -28,7 +27,14 @@ func onReady(w webview.WebView) func() {
 	return func() {
 		systray.SetTitle("Tray")
 		go func() {
-			mShowHide := systray.AddMenuItem("Show title", "")
+
+			mShowTitle := systray.AddMenuItem("GetTitle", "")
+			mHide := systray.AddMenuItem("Hide", "")
+			mShow := systray.AddMenuItem("Show", "")
+			mMaximize := systray.AddMenuItem("Maximize", "")
+			mUnmaximize := systray.AddMenuItem("Unmaximize", "")
+			mMinimize := systray.AddMenuItem("Minimize", "")
+			mUnminimize := systray.AddMenuItem("Unminimize", "")
 			systray.AddSeparator()
 			mQuit := systray.AddMenuItem("Quit                 ", "")
 
@@ -36,10 +42,33 @@ func onReady(w webview.WebView) func() {
 				select {
 				case <-mQuit.ClickedCh:
 					w.Terminate()
-				case <-mShowHide.ClickedCh:
-					//mShowHide.SetTitle("Hide")
-					//w.Hide()
-					fmt.Println(w.GetTitle())
+				case <-mShowTitle.ClickedCh:
+					dialog.Message("%s", w.GetTitle()).Info()
+				case <-mHide.ClickedCh:
+					w.Dispatch(func() {
+						w.Hide()
+					})
+				case <-mShow.ClickedCh:
+					w.Dispatch(func() {
+						w.Show()
+					})
+				case <-mMaximize.ClickedCh:
+					w.Dispatch(func() {
+						w.Maximize()
+					})
+				case <-mUnmaximize.ClickedCh:
+					w.Dispatch(func() {
+						w.Unmaximize()
+					})
+				case <-mMinimize.ClickedCh:
+					w.Dispatch(func() {
+						w.Minimize()
+					})
+				case <-mUnminimize.ClickedCh:
+					w.Dispatch(func() {
+						w.Unminimize()
+					})
+
 				}
 			}
 		}()

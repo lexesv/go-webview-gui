@@ -169,6 +169,17 @@ WEBVIEW_API void webview_set_borderless(webview_t w);
 
 WEBVIEW_API const char *webview_get_title(webview_t w);
 
+WEBVIEW_API int webview_is_maximized(webview_t w);
+
+WEBVIEW_API void webview_maximize(webview_t w);
+
+WEBVIEW_API void webview_unmaximize(webview_t w);
+
+WEBVIEW_API void webview_minimize(webview_t w);
+
+WEBVIEW_API void webview_unminimize(webview_t w);
+
+
 // Binds a native C callback so that it will appear under the given name as a
 // global JavaScript function. Internally it uses webview_init(). Callback
 // receives a request string and a user-provided argument pointer. Request
@@ -870,18 +881,37 @@ public:
     ((void (*)(id, SEL, int))objc_msgSend)((id) m_window,
             "setStyleMask:"_sel, windowStyleMask);
   }
-  /*void get_title(const std::string &title) {
-    title = std::string(
-      ((const char *(*)(id, SEL))objc_msgSend)(
-        ((id(*)(id, SEL))objc_msgSend)(m_window, "title"_sel)
-      , "UTF8String"_sel)
-    );
-  }*/
+
   const char* get_title() {
     const char* title = ((const char *(*)(id, SEL))objc_msgSend)(
         ((id(*)(id, SEL))objc_msgSend)(m_window, "title"_sel)
       , "UTF8String"_sel);
     return title;
+  }
+
+  bool is_maximized() {
+    return ((bool (*)(id, SEL, id))objc_msgSend)((id) m_window,
+        "isZoomed"_sel, NULL);
+  }
+
+  void maximize() {
+    ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
+        "zoom:"_sel, NULL);
+  }
+
+  void unmaximize() {
+    ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
+        "zoom:"_sel, NULL);
+  }
+
+  void minimize() {
+    ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
+        "miniaturize:"_sel, NULL);
+  }
+
+  void unminimize() {
+    ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
+        "deminiaturize:"_sel, NULL);
   }
 
 
@@ -2368,6 +2398,26 @@ WEBVIEW_API void webview_set_borderless(webview_t w) {
 
 WEBVIEW_API const char * webview_get_title(webview_t w) {
   return static_cast<webview::webview *>(w)->get_title();
+}
+
+WEBVIEW_API int webview_is_maximized(webview_t w) {
+  return static_cast<webview::webview *>(w)->is_maximized();
+}
+
+WEBVIEW_API void webview_maximize(webview_t w) {
+  static_cast<webview::webview *>(w)->maximize();
+}
+
+WEBVIEW_API void webview_unmaximize(webview_t w) {
+  static_cast<webview::webview *>(w)->unmaximize();
+}
+
+WEBVIEW_API void webview_minimize(webview_t w) {
+  static_cast<webview::webview *>(w)->minimize();
+}
+
+WEBVIEW_API void webview_unminimize(webview_t w) {
+  static_cast<webview::webview *>(w)->unminimize();
 }
 
 
