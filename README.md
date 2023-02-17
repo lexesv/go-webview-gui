@@ -1,9 +1,4 @@
-# webview
-
-[![Join the chat at https://gitter.im/zserge/webview](https://badges.gitter.im/zserge/webview.svg)](https://gitter.im/zserge/webview?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://img.shields.io/github/workflow/status/webview/webview/CI%20Pipeline)](https://github.com/webview/webview)
-[![GoDoc](https://godoc.org/github.com/webview/webview?status.svg)](https://godoc.org/github.com/webview/webview)
-[![Go Report Card](https://goreportcard.com/badge/github.com/webview/webview)](https://goreportcard.com/report/github.com/webview/webview)
+# Golang Webview GUI
 
 A tiny cross-platform webview library for C/C++/Go to build modern cross-platform GUIs.
 
@@ -97,70 +92,6 @@ curl -sSLo "libs/webview/webview.h" "https://raw.githubusercontent.com/webview/w
 curl -sSLo "libs/webview/webview.cc" "https://raw.githubusercontent.com/webview/webview/master/webview.cc"
 ```
 
-### Getting Started with C++
-
-Save the basic C++ example into your project directory:
-
-```sh
-curl -sSLo basic.cc "https://raw.githubusercontent.com/webview/webview/master/examples/basic.cc"
-```
-
-Build and run the example:
-
-```sh
-# Linux
-g++ basic.cc -std=c++11 -Ilibs/webview $(pkg-config --cflags --libs gtk+-3.0 webkit2gtk-4.0) -o build/basic && ./build/basic
-# macOS
-g++ basic.cc -std=c++11 -Ilibs/webview -framework WebKit -o build/basic && ./build/basic
-# Windows/MinGW
-g++ basic.cc -std=c++17 -mwindows -Ilibs/webview -Ilibs/webview2/build/native/include -ladvapi32 -lole32 -lshell32 -lshlwapi -luser32 -lversion -o build/basic.exe && "build/basic.exe"
-```
-
-#### Bonus for Visual C++
-
-Build a shared library:
-
-```bat
-cl libs\webview\webview.cc /std:c++17 /EHsc /Fobuild\ ^
-    /D "WEBVIEW_API=__declspec(dllexport)" ^
-    /I libs\webview ^
-    /I libs\webview2\build\native\include ^
-    /link /DLL /OUT:build\webview.dll
-```
-
-Build an example:
-
-```bat
-cl basic.cc /std:c++17 /EHsc /Fobuild\ ^
-    /I libs\webview ^
-    /I libs\webview2\build\native\include ^
-    /link /OUT:build\basic.exe
-```
-
-### Getting Started with C
-
-Save the basic C example into your project directory:
-
-```sh
-curl -sSLo basic.c "https://raw.githubusercontent.com/webview/webview/master/examples/basic.c"
-```
-
-Build the library and example, then run it:
-
-```sh
-# Linux
-g++ -c libs/webview/webview.cc -std=c++11 $(pkg-config --cflags gtk+-3.0 webkit2gtk-4.0) -o build/webview.o
-gcc -c basic.c -std=c99 -Ilibs/webview -o build/basic.o
-g++ build/basic.o build/webview.o $(pkg-config --libs gtk+-3.0 webkit2gtk-4.0) -o build/basic && build/basic
-# macOS
-g++ -c libs/webview/webview.cc -std=c++11 -o build/webview.o
-gcc -c basic.c -std=c99 -Ilibs/webview -o build/basic.o
-g++ build/basic.o build/webview.o -framework WebKit -o build/basic && build/basic
-# Windows/MinGW
-g++ -c libs/webview/webview.cc -std=c++17 -Ilibs/webview2/build/native/include -o build/webview.o
-gcc -c basic.c -std=c99 -Ilibs/webview -o build/basic.o
-g++ build/basic.o build/webview.o -mwindows -ladvapi32 -lole32 -lshell32 -lshlwapi -luser32 -lversion -o build/basic.exe && "build/basic.exe"
-```
 
 ### Getting Started with Go
 
@@ -306,40 +237,6 @@ For example, the library does not attempt to support user interaction features l
 
 Calling `Eval()` or `Dispatch()` before `Run()` does not work because the webview instance has only been configured and not yet started.
 
-## Bindings
-
-Language    | Project
-----------  | -------
-C#          | [webview/webview_csharp](https://github.com/webview/webview_csharp)
-Crystal     | [naqvis/webview](https://github.com/naqvis/webview)
-Deno        | [webview/webview_deno](https://github.com/webview/webview_deno)
-Go          | [webview/webview][webview]
-Haskell     | [lettier/webviewhs](https://github.com/lettier/webviewhs)
-Janet       | [janet-lang/webview](https://github.com/janet-lang/webview)
-Java        | [webview/webview_java](https://github.com/webview/webview_java)
-Kotlin      | [Winterreisender/webviewko](https://github.com/Winterreisender/webviewko)
-Nim         | [oskca/webview](https://github.com/oskca/webview)
-Pascal      | [PierceNg/fpwebview](http://github.com/PierceNg/fpwebview)
-Python      | [zserge/webview-python](https://github.com/zserge/webview-python)
-Ruby        | [Maaarcocr/webview_ruby](https://github.com/Maaarcocr/webview_ruby)
-Rust        | [Boscop/webview-rs](https://github.com/Boscop/webview-rs)
-V           | [malisipi/mui](https://github.com/malisipi/mui/tree/main/webview)
-
-If you wish to add bindings to the list, feel free to submit a pull request or [open an issue][issues-new].
-
-## Generating Bindings
-
-You can generate bindings for the library by yourself using the included SWIG interface (`webview.i`).
-
-Here are some examples to get you started. Unix-style command lines are used for conciseness.
-
-```sh
-mkdir -p build/bindings/{python,csharp,java,ruby}
-swig -c++ -python -outdir build/bindings/python -o build/bindings/python/python_wrap.cpp webview.i
-swig -c++ -csharp -outdir build/bindings/csharp -o build/bindings/csharp/csharp_wrap.cpp webview.i
-swig -c++ -java -outdir build/bindings/java -o build/bindings/java/java_wrap.cpp webview.i
-swig -c++ -ruby -outdir build/bindings/ruby -o build/bindings/ruby/ruby_wrap.cpp webview.i
-```
 
 ## License
 

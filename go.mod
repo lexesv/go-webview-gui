@@ -1,8 +1,6 @@
-module github.com/lexesv/webview
+module github.com/lexesv/go-webview-gui
 
 go 1.19
-
-require github.com/ghostiam/systray v1.3.0
 
 require (
 	github.com/getlantern/context v0.0.0-20190109183933-c447772a6520 // indirect

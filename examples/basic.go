@@ -4,6 +4,7 @@ import "C"
 import (
 	"fmt"
 
+	"github.com/lexesv/go-webview-gui"
 	"github.com/lexesv/go-webview-gui/systray"
 )
 
