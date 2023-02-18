@@ -23,6 +23,7 @@ import "C"
 import (
 	"encoding/json"
 	"errors"
+	"os"
 	"reflect"
 	"runtime"
 	"sync"
@@ -112,10 +113,10 @@ type WebView interface {
 	// f must return either value and error or just error
 	Bind(name string, f interface{}) error
 
-	GetTitle() string //+
-	Hide()            //+
-	Show()            //+
-	SetBorderless()   //+
+	GetTitle() string
+	Hide()
+	Show()
+	SetBorderless()
 	IsMaximized() bool
 	Maximize()
 	Unmaximize()
@@ -125,8 +126,14 @@ type WebView interface {
 	SetFullScreen()
 	ExitFullScreen()
 	IsFullScreen() bool
-	SetIcon(icon string)
+	SetIcon(icon string) error
 	SetAlwaysOnTop(onTop bool)
+	/*
+		json focus(const json &input);
+		json move(const json &input);
+		json getSize(const json &input);
+		json getPosition(const json &input);
+	*/
 }
 
 type webview struct {
@@ -222,11 +229,15 @@ func (w *webview) GetTitle() string {
 }
 
 func (w *webview) Hide() {
-	C.webview_hide(w.w)
+	if w.IsVisible() {
+		C.webview_hide(w.w)
+	}
 }
 
 func (w *webview) Show() {
-	C.webview_show(w.w)
+	if !w.IsVisible() {
+		C.webview_show(w.w)
+	}
 }
 
 func (w *webview) SetBorderless() {
@@ -261,22 +272,47 @@ func (w *webview) Unminimize() {
 }
 
 func (w *webview) IsVisible() bool {
-	return true
+	if C.webview_is_visible(w.w) != 0 {
+		return true
+	}
+	return false
 }
+
 func (w *webview) SetFullScreen() {
-
+	if !w.IsFullScreen() {
+		C.webview_set_full_screen(w.w)
+	}
 }
+
 func (w *webview) ExitFullScreen() {
-
+	if w.IsFullScreen() {
+		C.webview_exit_full_screen(w.w)
+	}
 }
+
 func (w *webview) IsFullScreen() bool {
-	return true
+	if C.webview_is_full_screen(w.w) != 0 {
+		return true
+	}
+	return false
 }
-func (w *webview) SetIcon(icon string) {
+func (w *webview) SetIcon(icon string) error {
+	b, err := os.ReadFile(icon)
+	if err != nil {
+		return err
+	}
+	s := C.CString(string(b))
+	defer C.free(unsafe.Pointer(s))
+	C.webview_set_icon(w.w, s)
+	return nil
+}
 
-}
 func (w *webview) SetAlwaysOnTop(onTop bool) {
-
+	v := 0
+	if onTop {
+		v = 1
+	}
+	C.webview_set_always_ontop(w.w, C.int(v))
 }
 
 func (w *webview) Dispatch(f func()) {

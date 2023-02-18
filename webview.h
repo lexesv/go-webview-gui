@@ -179,6 +179,21 @@ WEBVIEW_API void webview_minimize(webview_t w);
 
 WEBVIEW_API void webview_unminimize(webview_t w);
 
+WEBVIEW_API int webview_is_maximized(webview_t w);
+
+WEBVIEW_API int webview_is_visible(webview_t w);
+
+WEBVIEW_API void webview_set_full_screen(webview_t w);
+
+WEBVIEW_API void webview_exit_full_screen(webview_t w);
+
+WEBVIEW_API int webview_is_full_screen(webview_t w);
+
+WEBVIEW_API void webview_set_icon(webview_t w, char *iconData);
+
+WEBVIEW_API void webview_set_always_ontop(webview_t w, int on_top);
+
+
 
 // Binds a native C callback so that it will appear under the given name as a
 // global JavaScript function. Internally it uses webview_init(). Callback
@@ -235,6 +250,12 @@ WEBVIEW_API const webview_version_info_t *webview_version();
 #define WEBVIEW_DEPRECATED_PRIVATE                                             \
   WEBVIEW_DEPRECATED("Private API should not be used")
 #endif
+
+
+#define NSBaseWindowLevel 0
+#define NSFloatingWindowLevel 5
+#define NSWindowStyleMaskFullScreen 16384
+
 
 #include <array>
 #include <atomic>
@@ -912,6 +933,47 @@ public:
   void unminimize() {
     ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
         "deminiaturize:"_sel, NULL);
+  }
+
+  bool is_visible(){
+    return ((bool (*)(id, SEL, id))objc_msgSend)((id) m_window,
+        "isVisible"_sel, NULL);
+  }
+
+  void set_full_screen(){
+    ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
+            "toggleFullScreen:"_sel, NULL);
+  }
+
+  void exit_full_screen(){
+    ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
+            "toggleFullScreen:"_sel, NULL);
+  }
+
+  bool is_full_screen(){
+    unsigned long windowStyleMask = ((unsigned long (*)(id, SEL))objc_msgSend)(
+        (id) m_window, "styleMask"_sel);
+    return (windowStyleMask & NSWindowStyleMaskFullScreen) == NSWindowStyleMaskFullScreen;
+  }
+
+  void set_icon(const char *iconData){
+    id icon = nullptr;
+    //const char *iconData = iconDataStr;
+    icon =
+        ((id (*)(id, SEL))objc_msgSend)("NSImage"_cls, "alloc"_sel);
+
+    id nsIconData = ((id (*)(id, SEL, const char*, int))objc_msgSend)("NSData"_cls,
+                "dataWithBytes:length:"_sel, iconData, strlen(iconData));
+
+    ((void (*)(id, SEL, id))objc_msgSend)(icon, "initWithData:"_sel, nsIconData);
+    ((void (*)(id, SEL, id))objc_msgSend)(((id (*)(id, SEL))objc_msgSend)("NSApplication"_cls,
+                                "sharedApplication"_sel),
+                "setApplicationIconImage:"_sel,icon);
+  }
+
+  void set_always_ontop(int on_top){
+      ((void (*)(id, SEL, int))objc_msgSend)((id) m_window,
+            "setLevel:"_sel, on_top ? NSFloatingWindowLevel : NSBaseWindowLevel);
   }
 
 
@@ -2400,10 +2462,6 @@ WEBVIEW_API const char * webview_get_title(webview_t w) {
   return static_cast<webview::webview *>(w)->get_title();
 }
 
-WEBVIEW_API int webview_is_maximized(webview_t w) {
-  return static_cast<webview::webview *>(w)->is_maximized();
-}
-
 WEBVIEW_API void webview_maximize(webview_t w) {
   static_cast<webview::webview *>(w)->maximize();
 }
@@ -2420,6 +2478,33 @@ WEBVIEW_API void webview_unminimize(webview_t w) {
   static_cast<webview::webview *>(w)->unminimize();
 }
 
+WEBVIEW_API int webview_is_maximized(webview_t w) {
+  return static_cast<webview::webview *>(w)->is_maximized();
+}
+
+WEBVIEW_API int webview_is_visible(webview_t w) {
+  return static_cast<webview::webview *>(w)->is_visible();
+}
+
+WEBVIEW_API void webview_set_full_screen(webview_t w) {
+  static_cast<webview::webview *>(w)->set_full_screen();
+}
+
+WEBVIEW_API void webview_exit_full_screen(webview_t w) {
+  static_cast<webview::webview *>(w)->exit_full_screen();
+}
+
+WEBVIEW_API int webview_is_full_screen(webview_t w) {
+  return static_cast<webview::webview *>(w)->is_full_screen();
+}
+
+WEBVIEW_API void webview_set_icon(webview_t w, const char *iconData) {
+  static_cast<webview::webview *>(w)->set_icon(iconData);
+}
+
+WEBVIEW_API void webview_set_always_ontop(webview_t w, int on_top) {
+  static_cast<webview::webview *>(w)->set_always_ontop(on_top);
+}
 
 WEBVIEW_API void webview_bind(webview_t w, const char *name,
                               void (*fn)(const char *seq, const char *req,

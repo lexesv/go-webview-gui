@@ -1,7 +1,7 @@
 package dialog
 
 import (
-	"github.com/sqweek/dialog/cocoa"
+	"github.com/lexesv/go-webview-gui/dialog/cocoa"
 )
 
 func (b *MsgBuilder) yesNo() bool {
