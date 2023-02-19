@@ -2,42 +2,50 @@ package main
 
 import "C"
 import (
+	"os"
+
 	"github.com/lexesv/go-webview-gui"
 	"github.com/lexesv/go-webview-gui/dialog"
 	"github.com/lexesv/go-webview-gui/systray"
 )
 
+var (
+	iconData []byte
+)
+
 func main() {
-	NewWebView()
-}
-
-func NewWebView() {
+	iconData, _ = os.ReadFile("icon.png")
 	w := webview.New(false)
-
 	defer w.Destroy()
-	w.SetTitle("Basic Example")
-	w.SetSize(480, 320, webview.HintNone|webview.HintFixed)
-	w.SetHtml("Thanks for using webview!")
-	//w.Navigate("https://google.com")
-	//w.SetBorderless()
 	systray.Register(onReady(w))
+	w.SetTitle("Systray Example")
+	w.SetSize(480, 320, webview.HintNone)
+	w.SetHtml("Thanks for using Golang Webview GUI!")
 	w.Run()
 }
 
 func onReady(w webview.WebView) func() {
 	return func() {
 		systray.SetTitle("Tray")
+		systray.SetIcon(iconData)
 		go func() {
 
 			mShowTitle := systray.AddMenuItem("GetTitle", "")
+			mGetSizePosition := systray.AddMenuItem("Get Size & Position", "")
 			mHide := systray.AddMenuItem("Hide", "")
 			mShow := systray.AddMenuItem("Show", "")
 			mMaximize := systray.AddMenuItem("Maximize", "")
 			mUnmaximize := systray.AddMenuItem("Unmaximize", "")
 			mMinimize := systray.AddMenuItem("Minimize", "")
 			mUnminimize := systray.AddMenuItem("Unminimize", "")
+			mSetFullScreen := systray.AddMenuItem("SetFullScreen", "")
+			mExitFullScreen := systray.AddMenuItem("ExitFullScreen", "")
+			mSetAlwaysOnTopTrue := systray.AddMenuItem("SetAlwaysOnTop True", "")
+			mSetAlwaysOnTopFalse := systray.AddMenuItem("SetAlwaysOnTop False", "")
 			mSetBorderless := systray.AddMenuItem("SetBorderless", "")
 			mSetBordered := systray.AddMenuItem("SetBordered", "")
+			systray.AddSeparator()
+			mNewWebView := systray.AddMenuItem("NewWebView", "")
 			systray.AddSeparator()
 			mQuit := systray.AddMenuItem("Quit                 ", "")
 
@@ -47,6 +55,10 @@ func onReady(w webview.WebView) func() {
 					w.Terminate()
 				case <-mShowTitle.ClickedCh:
 					dialog.Message("%s", w.GetTitle()).Info()
+				case <-mGetSizePosition.ClickedCh:
+					width, height, hint := w.GetSize()
+					x, y := w.GetPosition()
+					dialog.Message("Size:%dx%d %v. \nPosition: X:%d Y:%d", width, height, hint, x, y).Info()
 				case <-mHide.ClickedCh:
 					w.Dispatch(func() {
 						w.Hide()
@@ -79,6 +91,25 @@ func onReady(w webview.WebView) func() {
 					w.Dispatch(func() {
 						w.SetBordered()
 					})
+				case <-mSetAlwaysOnTopTrue.ClickedCh:
+					w.Dispatch(func() {
+						w.SetAlwaysOnTop(true)
+					})
+				case <-mSetAlwaysOnTopFalse.ClickedCh:
+					w.Dispatch(func() {
+						w.SetAlwaysOnTop(false)
+					})
+				case <-mSetFullScreen.ClickedCh:
+					w.Dispatch(func() {
+						w.SetFullScreen()
+					})
+				case <-mExitFullScreen.ClickedCh:
+					w.Dispatch(func() {
+						w.ExitFullScreen()
+					})
+				case <-mNewWebView.ClickedCh:
+					//NewWebView()
+
 				}
 			}
 		}()

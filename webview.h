@@ -167,8 +167,6 @@ WEBVIEW_API void webview_show(webview_t w);
 
 WEBVIEW_API void webview_set_borderless(webview_t w);
 
-WEBVIEW_API void webview_set_bordered(webview_t w);
-
 WEBVIEW_API const char *webview_get_title(webview_t w);
 
 WEBVIEW_API int webview_is_maximized(webview_t w);
@@ -195,6 +193,13 @@ WEBVIEW_API void webview_set_icon(webview_t w, const char *iconData);
 
 WEBVIEW_API void webview_set_always_ontop(webview_t w, int on_top);
 
+WEBVIEW_API int webview_get_width(webview_t w);
+
+WEBVIEW_API int webview_get_height(webview_t w);
+
+WEBVIEW_API int webview_get_position_x(webview_t w);
+
+WEBVIEW_API int webview_get_position_y(webview_t w);
 
 
 // Binds a native C callback so that it will appear under the given name as a
@@ -801,11 +806,11 @@ public:
     auto app = get_shared_application();
     objc::msg_send<void>(app, "terminate:"_sel, nullptr);
   }
-  /*void run() {
+  void run() {
     auto app = get_shared_application();
     objc::msg_send<void>(app, "run"_sel);
-  }*/
-  void run() {
+  }
+  /*void run() {
     id app = ((id(*)(id, SEL))objc_msgSend)("NSApplication"_cls,
                                             "sharedApplication"_sel);
     dispatch([&]() {
@@ -813,7 +818,7 @@ public:
           app, "activateIgnoringOtherApps:"_sel, 1);
     });
     ((void (*)(id, SEL))objc_msgSend)(app, "run"_sel);
-  }
+  }*/
   void dispatch(std::function<void()> f) {
     dispatch_async_f(dispatch_get_main_queue(), new dispatch_fn_t(f),
                      (dispatch_function_t)([](void *arg) {
@@ -905,13 +910,6 @@ public:
             "setStyleMask:"_sel, windowStyleMask);
   }
 
-  void set_bordered() {
-    auto style = static_cast<NSWindowStyleMask>(
-        NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
-        NSWindowStyleMaskMiniaturizable);
-    objc::msg_send<void>(m_window, "setStyleMask:"_sel, style);
-  }
-
   const char* get_title() {
     const char* title = ((const char *(*)(id, SEL))objc_msgSend)(
         ((id(*)(id, SEL))objc_msgSend)(m_window, "title"_sel)
@@ -984,6 +982,39 @@ public:
             "setLevel:"_sel, on_top ? NSFloatingWindowLevel : NSBaseWindowLevel);
   }
 
+  CGRect __getWindowRect() {
+    // "frame"_sel is the easiest way, but it crashes
+    // So, this is a workaround with low-level APIs.
+    long winId = ((long(*)(id, SEL))objc_msgSend)(m_window, "windowNumber"_sel);
+    auto winInfoArray = CGWindowListCopyWindowInfo(kCGWindowListOptionIncludingWindow, winId);
+    auto winInfo = CFArrayGetValueAtIndex(winInfoArray, 0);
+    auto winBounds = CFDictionaryGetValue((CFDictionaryRef) winInfo, kCGWindowBounds);
+
+    CGRect winPos;
+    CGRectMakeWithDictionaryRepresentation((CFDictionaryRef) winBounds, &winPos);
+    return winPos;
+ }
+
+  int get_width(){
+    CGRect winPos = __getWindowRect();
+    return winPos.size.width;
+  }
+
+  int get_height(){
+    CGRect winPos = __getWindowRect();
+    return winPos.size.height;
+  }
+
+  int get_position_x(){
+    CGRect winPos = __getWindowRect();
+    return winPos.origin.x;
+  }
+
+  int get_position_y(){
+    CGRect winPos = __getWindowRect();
+    return winPos.origin.x;
+  }
+
 
 private:
   virtual void on_message(const std::string &msg) = 0;
@@ -994,8 +1025,8 @@ private:
     auto cls = objc_allocateClassPair((Class) "NSResponder"_cls,
                                       "WebviewAppDelegate", 0);
     class_addProtocol(cls, objc_getProtocol("NSTouchBarProvider"));
-    /*class_addMethod(cls, "applicationShouldTerminateAfterLastWindowClosed:"_sel,
-                    (IMP)(+[](id, SEL, id) -> BOOL { return 1; }), "c@:@");*/
+    class_addMethod(cls, "applicationShouldTerminateAfterLastWindowClosed:"_sel,
+                    (IMP)(+[](id, SEL, id) -> BOOL { return 0; }), "c@:@");
 
     // If the library was not initialized with an existing window then the user
     // is likely managing the application lifecycle and we would not get the
@@ -2466,10 +2497,6 @@ WEBVIEW_API void webview_set_borderless(webview_t w) {
   static_cast<webview::webview *>(w)->set_borderless();
 }
 
-WEBVIEW_API void webview_set_bordered(webview_t w) {
-  static_cast<webview::webview *>(w)->set_bordered();
-}
-
 WEBVIEW_API const char * webview_get_title(webview_t w) {
   return static_cast<webview::webview *>(w)->get_title();
 }
@@ -2516,6 +2543,22 @@ WEBVIEW_API void webview_set_icon(webview_t w, const char *iconData) {
 
 WEBVIEW_API void webview_set_always_ontop(webview_t w, int on_top) {
   static_cast<webview::webview *>(w)->set_always_ontop(on_top);
+}
+
+WEBVIEW_API int webview_get_width(webview_t w) {
+  return static_cast<webview::webview *>(w)->get_width();
+}
+
+WEBVIEW_API int webview_get_height(webview_t w) {
+  return static_cast<webview::webview *>(w)->get_height();
+}
+
+WEBVIEW_API int webview_get_position_x(webview_t w) {
+  return static_cast<webview::webview *>(w)->get_position_x();
+}
+
+WEBVIEW_API int webview_get_position_y(webview_t w) {
+  return static_cast<webview::webview *>(w)->get_position_y();
 }
 
 WEBVIEW_API void webview_bind(webview_t w, const char *name,

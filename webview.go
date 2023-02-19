@@ -128,20 +128,20 @@ type WebView interface {
 	ExitFullScreen()
 	IsFullScreen() bool
 	SetIcon(icon string) error
+	SetIconBites(b []byte)
 	SetAlwaysOnTop(onTop bool)
+	GetSize() (width int, height int, hint Hint)
+	GetPosition() (x, y int)
 	/*
-		json focus(const json &input);
-		json move(const json &input);
-		json getSize(const json &input);
-		json getPosition(const json &input);
+	 focus();
+	 move();
+	 getPosition();
 	*/
 
 }
 type webview struct {
-	w      C.webview_t
-	Width  int
-	Height int
-	Hint   Hint
+	w    C.webview_t
+	Hint Hint
 }
 
 var (
@@ -215,6 +215,19 @@ func (w *webview) SetSize(width int, height int, hint Hint) {
 	C.webview_set_size(w.w, C.int(width), C.int(height), C.int(hint))
 }
 
+func (w *webview) GetSize() (width int, height int, hint Hint) {
+	width = int(C.webview_get_width(w.w))
+	height = int(C.webview_get_height(w.w))
+	hint = w.Hint
+	return width, height, hint
+}
+
+func (w *webview) GetPosition() (x, y int) {
+	x = int(C.webview_get_position_x(w.w))
+	y = int(C.webview_get_position_y(w.w))
+	return x, y
+}
+
 func (w *webview) Init(js string) {
 	s := C.CString(js)
 	defer C.free(unsafe.Pointer(s))
@@ -247,8 +260,10 @@ func (w *webview) Show() {
 func (w *webview) SetBorderless() {
 	C.webview_set_borderless(w.w)
 }
+
 func (w *webview) SetBordered() {
-	C.webview_set_bordered(w.w)
+	width, height, hint := w.GetSize()
+	C.webview_set_size(w.w, C.int(width), C.int(height), C.int(hint))
 }
 
 func (w *webview) IsMaximized() bool {
@@ -313,6 +328,12 @@ func (w *webview) SetIcon(icon string) error {
 	defer C.free(unsafe.Pointer(s))
 	C.webview_set_icon(w.w, s)
 	return nil
+}
+
+func (w *webview) SetIconBites(b []byte) {
+	s := C.CString(string(b))
+	defer C.free(unsafe.Pointer(s))
+	C.webview_set_icon(w.w, s)
 }
 
 func (w *webview) SetAlwaysOnTop(onTop bool) {
