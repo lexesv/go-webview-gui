@@ -117,6 +117,7 @@ type WebView interface {
 	Hide()
 	Show()
 	SetBorderless()
+	SetBordered()
 	IsMaximized() bool
 	Maximize()
 	Unmaximize()
@@ -134,10 +135,13 @@ type WebView interface {
 		json getSize(const json &input);
 		json getPosition(const json &input);
 	*/
-}
 
+}
 type webview struct {
-	w C.webview_t
+	w      C.webview_t
+	Width  int
+	Height int
+	Hint   Hint
 }
 
 var (
@@ -243,6 +247,9 @@ func (w *webview) Show() {
 func (w *webview) SetBorderless() {
 	C.webview_set_borderless(w.w)
 }
+func (w *webview) SetBordered() {
+	C.webview_set_bordered(w.w)
+}
 
 func (w *webview) IsMaximized() bool {
 	if C.webview_is_maximized(w.w) != 0 {
@@ -296,6 +303,7 @@ func (w *webview) IsFullScreen() bool {
 	}
 	return false
 }
+
 func (w *webview) SetIcon(icon string) error {
 	b, err := os.ReadFile(icon)
 	if err != nil {
@@ -308,11 +316,7 @@ func (w *webview) SetIcon(icon string) error {
 }
 
 func (w *webview) SetAlwaysOnTop(onTop bool) {
-	v := 0
-	if onTop {
-		v = 1
-	}
-	C.webview_set_always_ontop(w.w, C.int(v))
+	C.webview_set_always_ontop(w.w, boolToInt(onTop))
 }
 
 func (w *webview) Dispatch(f func()) {

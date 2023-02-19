@@ -167,6 +167,8 @@ WEBVIEW_API void webview_show(webview_t w);
 
 WEBVIEW_API void webview_set_borderless(webview_t w);
 
+WEBVIEW_API void webview_set_bordered(webview_t w);
+
 WEBVIEW_API const char *webview_get_title(webview_t w);
 
 WEBVIEW_API int webview_is_maximized(webview_t w);
@@ -189,7 +191,7 @@ WEBVIEW_API void webview_exit_full_screen(webview_t w);
 
 WEBVIEW_API int webview_is_full_screen(webview_t w);
 
-WEBVIEW_API void webview_set_icon(webview_t w, char *iconData);
+WEBVIEW_API void webview_set_icon(webview_t w, const char *iconData);
 
 WEBVIEW_API void webview_set_always_ontop(webview_t w, int on_top);
 
@@ -903,6 +905,13 @@ public:
             "setStyleMask:"_sel, windowStyleMask);
   }
 
+  void set_bordered() {
+    auto style = static_cast<NSWindowStyleMask>(
+        NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
+        NSWindowStyleMaskMiniaturizable);
+    objc::msg_send<void>(m_window, "setStyleMask:"_sel, style);
+  }
+
   const char* get_title() {
     const char* title = ((const char *(*)(id, SEL))objc_msgSend)(
         ((id(*)(id, SEL))objc_msgSend)(m_window, "title"_sel)
@@ -959,8 +968,7 @@ public:
   void set_icon(const char *iconData){
     id icon = nullptr;
     //const char *iconData = iconDataStr;
-    icon =
-        ((id (*)(id, SEL))objc_msgSend)("NSImage"_cls, "alloc"_sel);
+    icon = ((id (*)(id, SEL))objc_msgSend)("NSImage"_cls, "alloc"_sel);
 
     id nsIconData = ((id (*)(id, SEL, const char*, int))objc_msgSend)("NSData"_cls,
                 "dataWithBytes:length:"_sel, iconData, strlen(iconData));
@@ -2456,6 +2464,10 @@ WEBVIEW_API void webview_show(webview_t w) {
 
 WEBVIEW_API void webview_set_borderless(webview_t w) {
   static_cast<webview::webview *>(w)->set_borderless();
+}
+
+WEBVIEW_API void webview_set_bordered(webview_t w) {
+  static_cast<webview::webview *>(w)->set_bordered();
 }
 
 WEBVIEW_API const char * webview_get_title(webview_t w) {

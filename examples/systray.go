@@ -13,9 +13,10 @@ func main() {
 
 func NewWebView() {
 	w := webview.New(false)
+
 	defer w.Destroy()
 	w.SetTitle("Basic Example")
-	w.SetSize(480, 320, webview.HintNone)
+	w.SetSize(480, 320, webview.HintNone|webview.HintFixed)
 	w.SetHtml("Thanks for using webview!")
 	//w.Navigate("https://google.com")
 	//w.SetBorderless()
@@ -35,6 +36,8 @@ func onReady(w webview.WebView) func() {
 			mUnmaximize := systray.AddMenuItem("Unmaximize", "")
 			mMinimize := systray.AddMenuItem("Minimize", "")
 			mUnminimize := systray.AddMenuItem("Unminimize", "")
+			mSetBorderless := systray.AddMenuItem("SetBorderless", "")
+			mSetBordered := systray.AddMenuItem("SetBordered", "")
 			systray.AddSeparator()
 			mQuit := systray.AddMenuItem("Quit                 ", "")
 
@@ -68,7 +71,14 @@ func onReady(w webview.WebView) func() {
 					w.Dispatch(func() {
 						w.Unminimize()
 					})
-
+				case <-mSetBorderless.ClickedCh:
+					w.Dispatch(func() {
+						w.SetBorderless()
+					})
+				case <-mSetBordered.ClickedCh:
+					w.Dispatch(func() {
+						w.SetBordered()
+					})
 				}
 			}
 		}()

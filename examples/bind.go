@@ -1,6 +1,6 @@
 package main
 
-import "github.com/lexesv/webview"
+import "github.com/lexesv/go-webview-gui"
 
 const html = `<button id="increment">Tap me</button>
 <div>You tapped <span id="count">0</span> time(s).</div>
