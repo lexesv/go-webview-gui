@@ -4,7 +4,7 @@ package webview
 #cgo linux openbsd freebsd netbsd CXXFLAGS: -DWEBVIEW_GTK -std=c++11
 #cgo linux openbsd freebsd netbsd pkg-config: gtk+-3.0 webkit2gtk-4.0
 
-#cgo darwin CXXFLAGS: -DWEBVIEW_COCOA -std=c++17 -Wno-deprecated-declarations
+#cgo darwin CXXFLAGS: -DWEBVIEW_COCOA -std=c++17
 #cgo darwin LDFLAGS: -framework WebKit -framework Cocoa
 
 #cgo windows CXXFLAGS: -DWEBVIEW_EDGE -std=c++17
@@ -17,12 +17,14 @@ package webview
 
 void CgoWebViewDispatch(webview_t w, uintptr_t arg);
 void CgoWebViewBind(webview_t w, const char *name, uintptr_t index);
-
+void event_handler(int state);
+typedef void (*closure)();
 */
 import "C"
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"reflect"
 	"runtime"
@@ -50,6 +52,12 @@ const (
 
 	// Width and height are maximum bounds
 	HintMax = C.WEBVIEW_HINT_MAX
+
+	WEBVIEW_WINDOW_CLOSE      = C.int(0)
+	WEBVIEW_WINDOW_FOCUS      = C.int(1)
+	WEBVIEW_WINDOW_BLUR       = C.int(2)
+	WEBVIEW_WINDOW_FULLSCREEN = C.int(3)   // GTK only
+	WEBVIEW_WINDOW_UNDEFINED  = C.int(100) // GTK only
 )
 
 type WebView interface {
@@ -158,6 +166,13 @@ func boolToInt(b bool) C.int {
 	return 0
 }
 
+//export event_handler
+func event_handler(state C.int) {
+	if state == WEBVIEW_WINDOW_CLOSE {
+		fmt.Println(state)
+	}
+}
+
 // New calls NewWindow to create a new window and a new webview instance. If debug
 // is non-zero - developer tools will be enabled (if the platform supports them).
 func New(debug bool) WebView { return NewWindow(debug, nil) }
@@ -174,6 +189,7 @@ func NewWindow(debug bool, window unsafe.Pointer) WebView {
 	if res == nil {
 		return nil
 	}
+	C.webview_set_event_handler(C.closure(C.event_handler))
 	return &webview{w: res}
 }
 
@@ -240,11 +256,6 @@ func (w *webview) Eval(js string) {
 	C.webview_eval(w.w, s)
 }
 
-func (w *webview) GetTitle() string {
-	s := C.webview_get_title(w.w)
-	return C.GoString(s)
-}
-
 func (w *webview) Hide() {
 	if w.IsVisible() {
 		C.webview_hide(w.w)
@@ -255,6 +266,11 @@ func (w *webview) Show() {
 	if !w.IsVisible() {
 		C.webview_show(w.w)
 	}
+}
+
+func (w *webview) GetTitle() string {
+	s := C.webview_get_title(w.w)
+	return C.GoString(s)
 }
 
 func (w *webview) SetBorderless() {
@@ -331,9 +347,10 @@ func (w *webview) SetIcon(icon string) error {
 }
 
 func (w *webview) SetIconBites(b []byte) {
-	s := C.CString(string(b))
-	defer C.free(unsafe.Pointer(s))
-	C.webview_set_icon(w.w, s)
+	//p := C.CBytes(b)
+	//defer C.free(unsafe.Pointer(p))
+	//C.webview_set_icon(w.w, (*C.char)(unsafe.Pointer(&b[0])))
+	C.webview_set_icon(w.w, C.CString(string(b)))
 }
 
 func (w *webview) SetAlwaysOnTop(onTop bool) {

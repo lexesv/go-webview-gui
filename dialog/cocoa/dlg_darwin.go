@@ -1,16 +1,17 @@
 package cocoa
 
-// #cgo darwin LDFLAGS: -framework Cocoa
-// #include <stdlib.h>
-// #include <sys/syslimits.h>
-// #include "dlg.h"
 import "C"
-
 import (
 	"bytes"
 	"errors"
 	"unsafe"
 )
+
+// #cgo darwin LDFLAGS: -framework Cocoa
+// #include <stdlib.h>
+// #include <sys/syslimits.h>
+// #include "dlg.h"
+import "C"
 
 type AlertParams struct {
 	p C.AlertDlgParams

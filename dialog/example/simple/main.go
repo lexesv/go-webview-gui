@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/sqweek/dialog"
+	"github.com/lexesv/go-webview-gui/dialog"
 )
 
 func main() {

@@ -135,6 +135,14 @@ WEBVIEW_API void webview_set_title(webview_t w, const char *title);
 #define WEBVIEW_HINT_MIN 1   // Width and height are minimum bounds
 #define WEBVIEW_HINT_MAX 2   // Width and height are maximum bounds
 #define WEBVIEW_HINT_FIXED 3 // Window size can not be changed by a user
+
+// Window events
+#define WEBVIEW_WINDOW_CLOSE 0
+#define WEBVIEW_WINDOW_FOCUS 1
+#define WEBVIEW_WINDOW_BLUR 2
+#define WEBVIEW_WINDOW_FULLSCREEN 3 // GTK only
+#define WEBVIEW_WINDOW_UNDEFINED 100 // GTK only
+
 // Updates native window size. See WEBVIEW_HINT constants.
 WEBVIEW_API void webview_set_size(webview_t w, int width, int height,
                                   int hints);
@@ -161,6 +169,7 @@ WEBVIEW_API void webview_init(webview_t w, const char *js);
 WEBVIEW_API void webview_eval(webview_t w, const char *js);
 
 // Additional methods
+
 WEBVIEW_API void webview_hide(webview_t w);
 
 WEBVIEW_API void webview_show(webview_t w);
@@ -201,6 +210,7 @@ WEBVIEW_API int webview_get_position_x(webview_t w);
 
 WEBVIEW_API int webview_get_position_y(webview_t w);
 
+WEBVIEW_API void webview_set_event_handler(void (*f)(int));
 
 // Binds a native C callback so that it will appear under the given name as a
 // global JavaScript function. Internally it uses webview_init(). Callback
@@ -278,6 +288,9 @@ WEBVIEW_API const webview_version_info_t *webview_version();
 namespace webview {
 
 using dispatch_fn_t = std::function<void()>;
+
+using eventHandler_t = std::function<void(int)>;
+static eventHandler_t windowStateChange;
 
 namespace detail {
 
@@ -965,16 +978,15 @@ public:
 
   void set_icon(const char *iconData){
     id icon = nullptr;
-    //const char *iconData = iconDataStr;
+    std::string iconDataStr = std::string(iconData);
     icon = ((id (*)(id, SEL))objc_msgSend)("NSImage"_cls, "alloc"_sel);
 
     id nsIconData = ((id (*)(id, SEL, const char*, int))objc_msgSend)("NSData"_cls,
-                "dataWithBytes:length:"_sel, iconData, strlen(iconData));
+                "dataWithBytes:length:"_sel, iconDataStr.c_str(), iconDataStr.length());
 
     ((void (*)(id, SEL, id))objc_msgSend)(icon, "initWithData:"_sel, nsIconData);
     ((void (*)(id, SEL, id))objc_msgSend)(((id (*)(id, SEL))objc_msgSend)("NSApplication"_cls,
-                                "sharedApplication"_sel),
-                "setApplicationIconImage:"_sel,icon);
+                                "sharedApplication"_sel), "setApplicationIconImage:"_sel,icon);
   }
 
   void set_always_ontop(int on_top){
@@ -1166,6 +1178,32 @@ private:
     } else {
       m_window = (id)m_parent_window;
     }
+
+    // Main window delegate
+    auto wcls = objc_allocateClassPair((Class) "NSResponder"_cls, "WindowDelegate", 0);
+    class_addMethod(wcls, "windowShouldClose:"_sel,
+                    (IMP)(+[](id, SEL, id) -> BOOL {
+                      //if(windowStateChange)
+                        windowStateChange(WEBVIEW_WINDOW_CLOSE);
+                      return 0;
+                     }), "c@:@");
+    class_addMethod(wcls, "windowDidBecomeKey:"_sel,
+                    (IMP)(+[](id, SEL, id) {
+                        if(windowStateChange)
+                          windowStateChange(WEBVIEW_WINDOW_FOCUS);
+                    }), "c@:@");
+    class_addMethod(wcls, "windowDidResignKey:"_sel,
+                    (IMP)(+[](id, SEL, id) {
+                        if(windowStateChange)
+                          windowStateChange(WEBVIEW_WINDOW_BLUR);
+                    }), "c@:@");
+
+    objc_registerClassPair(wcls);
+
+    auto wdelegate = ((id(*)(id, SEL))objc_msgSend)((id)wcls, "new"_sel);
+    //objc_setAssociatedObject(delegate, "webview", (id)this, OBJC_ASSOCIATION_ASSIGN);
+    ((void (*)(id, SEL, id))objc_msgSend)(m_window, sel_registerName("setDelegate:"),
+                                          wdelegate);
 
     // Webview
     auto config = objc::msg_send<id>("WKWebViewConfiguration"_cls, "new"_sel);
@@ -2412,6 +2450,10 @@ public:
     });
   }
 
+  void setEventHandler(eventHandler_t handler) {
+    windowStateChange = handler;
+  }
+
 private:
   void on_message(const std::string &msg) {
     auto seq = detail::json_parse(msg, "id", 0);
@@ -2428,6 +2470,10 @@ private:
   std::map<std::string, binding_ctx_t> bindings;
 };
 } // namespace webview
+
+WEBVIEW_API void webview_set_event_handler(void (*fn)(int)) {
+    webview::windowStateChange = fn;
+}
 
 WEBVIEW_API webview_t webview_create(int debug, void *wnd) {
   auto w = new webview::webview(debug, wnd);

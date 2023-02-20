@@ -1,6 +1,8 @@
 #import <Cocoa/Cocoa.h>
 #include "dlg.h"
 
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 void* NSStr(void* buf, int len) {
 	return (void*)[[NSString alloc] initWithBytes:buf length:len encoding:NSUTF8StringEncoding];
 }
@@ -93,7 +95,10 @@ DlgResult fileDlg(FileDlgParams* params) {
 		[panel setTitle:[[NSString alloc] initWithUTF8String:self->params->title]];
 	}
 	if(self->params->numext > 0) {
-		[panel setAllowedFileTypes:[NSArray arrayWithObjects:(NSString**)self->params->exts count:self->params->numext]];
+        [panel setAllowedFileTypes:[NSArray arrayWithObjects:(NSString**)self->params->exts count:self->params->numext]];
+        // MacOS 12+
+        // [panel setAllowedContentTypes:[NSArray arrayWithObjects:(NSString**)self->params->exts count:self->params->numext]];
+
 	}
 	if(self->params->relaxext) {
 		[panel setAllowsOtherFileTypes:YES];

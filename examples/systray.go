@@ -14,11 +14,16 @@ var (
 )
 
 func main() {
-	iconData, _ = os.ReadFile("icon.png")
+	var err error
+	iconData, err = os.ReadFile("icon.png")
+	if err != nil {
+		panic(err)
+	}
 	w := webview.New(false)
 	defer w.Destroy()
 	systray.Register(onReady(w))
 	w.SetTitle("Systray Example")
+	//w.SetIconBites(iconData)
 	w.SetSize(480, 320, webview.HintNone)
 	w.SetHtml("Thanks for using Golang Webview GUI!")
 	w.Run()
@@ -54,6 +59,7 @@ func onReady(w webview.WebView) func() {
 				case <-mQuit.ClickedCh:
 					w.Terminate()
 				case <-mShowTitle.ClickedCh:
+					dialog.File().Filter("Mp3 audio file", "mp3").Load()
 					dialog.Message("%s", w.GetTitle()).Info()
 				case <-mGetSizePosition.ClickedCh:
 					width, height, hint := w.GetSize()
