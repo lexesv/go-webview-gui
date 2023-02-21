@@ -141,6 +141,8 @@ WEBVIEW_API void webview_set_title(webview_t w, const char *title);
 #define WEBVIEW_WINDOW_FOCUS 1
 #define WEBVIEW_WINDOW_BLUR 2
 #define WEBVIEW_WINDOW_FULLSCREEN 3 // GTK only
+#define WEBVIEW_WINDOW_MOVE 4
+#define WEBVIEW_WINDOW_RESIZE 5
 #define WEBVIEW_WINDOW_UNDEFINED 100 // GTK only
 
 // Updates native window size. See WEBVIEW_HINT constants.
@@ -209,6 +211,10 @@ WEBVIEW_API int webview_get_height(webview_t w);
 WEBVIEW_API int webview_get_position_x(webview_t w);
 
 WEBVIEW_API int webview_get_position_y(webview_t w);
+
+WEBVIEW_API void webview_move(webview_t w, int x, int y);
+
+WEBVIEW_API void webview_focus(webview_t w);
 
 WEBVIEW_API void webview_set_event_handler(void (*f)(int));
 
@@ -1024,7 +1030,20 @@ public:
 
   int get_position_y(){
     CGRect winPos = __getWindowRect();
-    return winPos.origin.x;
+    return winPos.origin.y;
+  }
+
+  void move(int x, int y){
+    auto displayId = CGMainDisplayID();
+    int height = CGDisplayPixelsHigh(displayId);
+    ((void (*)(id, SEL, CGPoint))objc_msgSend)(
+        (id) m_window, "setFrameTopLeftPoint:"_sel,
+        CGPointMake(x, height - y));
+  }
+
+  void focus(){
+    ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
+            "orderFront:"_sel, NULL);
   }
 
 
@@ -1183,7 +1202,7 @@ private:
     auto wcls = objc_allocateClassPair((Class) "NSResponder"_cls, "WindowDelegate", 0);
     class_addMethod(wcls, "windowShouldClose:"_sel,
                     (IMP)(+[](id, SEL, id) -> BOOL {
-                      //if(windowStateChange)
+                      if(windowStateChange)
                         windowStateChange(WEBVIEW_WINDOW_CLOSE);
                       return 0;
                      }), "c@:@");
@@ -1196,6 +1215,16 @@ private:
                     (IMP)(+[](id, SEL, id) {
                         if(windowStateChange)
                           windowStateChange(WEBVIEW_WINDOW_BLUR);
+                    }), "c@:@");
+    class_addMethod(wcls, "windowDidMove:"_sel,
+                    (IMP)(+[](id, SEL, id) {
+                        if(windowStateChange)
+                          windowStateChange(WEBVIEW_WINDOW_MOVE);
+                    }), "c@:@");
+    class_addMethod(wcls, "windowDidResize:"_sel,
+                    (IMP)(+[](id, SEL, id) {
+                        if(windowStateChange)
+                          windowStateChange(WEBVIEW_WINDOW_RESIZE);
                     }), "c@:@");
 
     objc_registerClassPair(wcls);
@@ -2605,6 +2634,14 @@ WEBVIEW_API int webview_get_position_x(webview_t w) {
 
 WEBVIEW_API int webview_get_position_y(webview_t w) {
   return static_cast<webview::webview *>(w)->get_position_y();
+}
+
+WEBVIEW_API void webview_move(webview_t w, int x, int y){
+     static_cast<webview::webview *>(w)->move(x, y);
+}
+
+WEBVIEW_API void webview_focus(webview_t w){
+     static_cast<webview::webview *>(w)->focus();
 }
 
 WEBVIEW_API void webview_bind(webview_t w, const char *name,

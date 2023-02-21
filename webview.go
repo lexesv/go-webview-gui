@@ -24,7 +24,6 @@ import "C"
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"reflect"
 	"runtime"
@@ -53,11 +52,13 @@ const (
 	// Width and height are maximum bounds
 	HintMax = C.WEBVIEW_HINT_MAX
 
-	WEBVIEW_WINDOW_CLOSE      = C.int(0)
-	WEBVIEW_WINDOW_FOCUS      = C.int(1)
-	WEBVIEW_WINDOW_BLUR       = C.int(2)
-	WEBVIEW_WINDOW_FULLSCREEN = C.int(3)   // GTK only
-	WEBVIEW_WINDOW_UNDEFINED  = C.int(100) // GTK only
+	WEBVIEW_WINDOW_CLOSE      = 0
+	WEBVIEW_WINDOW_FOCUS      = 1
+	WEBVIEW_WINDOW_BLUR       = 2
+	WEBVIEW_WINDOW_MOVE       = 4
+	WEBVIEW_WINDOW_RESIZE     = 5
+	WEBVIEW_WINDOW_FULLSCREEN = 3   // GTK only
+	WEBVIEW_WINDOW_UNDEFINED  = 100 // GTK only
 )
 
 type WebView interface {
@@ -140,16 +141,21 @@ type WebView interface {
 	SetAlwaysOnTop(onTop bool)
 	GetSize() (width int, height int, hint Hint)
 	GetPosition() (x, y int)
+	Move(x, y int)
+	Focus()
 	/*
 	 focus();
 	 move();
-	 getPosition();
 	*/
-
 }
+
 type webview struct {
 	w    C.webview_t
 	Hint Hint
+}
+
+type EventHandler struct {
+	Handle func(state int)
 }
 
 var (
@@ -157,6 +163,7 @@ var (
 	index    uintptr
 	dispatch = map[uintptr]func(){}
 	bindings = map[uintptr]func(id, req string) (interface{}, error){}
+	Events   = EventHandler{}
 )
 
 func boolToInt(b bool) C.int {
@@ -168,24 +175,13 @@ func boolToInt(b bool) C.int {
 
 //export event_handler
 func event_handler(state C.int) {
-	if state == WEBVIEW_WINDOW_CLOSE {
-		fmt.Println(state)
-	}
+	Events.Handle(int(state))
 }
 
 // New calls NewWindow to create a new window and a new webview instance. If debug
 // is non-zero - developer tools will be enabled (if the platform supports them).
-func New(debug bool) WebView { return NewWindow(debug, nil) }
-
-// NewWindow creates a new webview instance. If debug is non-zero - developer
-// tools will be enabled (if the platform supports them). Window parameter can be
-// a pointer to the native window handle. If it's non-null - then child WebView is
-// embedded into the given parent window. Otherwise a new window is created.
-// Depending on the platform, a GtkWindow, NSWindow or HWND pointer can be passed
-// here. Returns nil on failure. Creation can fail for various reasons such as when
-// required runtime dependencies are missing or when window creation fails.
-func NewWindow(debug bool, window unsafe.Pointer) WebView {
-	res := C.webview_create(boolToInt(debug), window)
+func New(debug bool) WebView {
+	res := C.webview_create(boolToInt(debug), nil)
 	if res == nil {
 		return nil
 	}
@@ -232,6 +228,9 @@ func (w *webview) SetSize(width int, height int, hint Hint) {
 }
 
 func (w *webview) GetSize() (width int, height int, hint Hint) {
+	if !w.IsVisible() {
+		return
+	}
 	width = int(C.webview_get_width(w.w))
 	height = int(C.webview_get_height(w.w))
 	hint = w.Hint
@@ -239,9 +238,20 @@ func (w *webview) GetSize() (width int, height int, hint Hint) {
 }
 
 func (w *webview) GetPosition() (x, y int) {
+	if !w.IsVisible() {
+		return
+	}
 	x = int(C.webview_get_position_x(w.w))
 	y = int(C.webview_get_position_y(w.w))
 	return x, y
+}
+
+func (w *webview) Move(x, y int) {
+	C.webview_move(w.w, C.int(x), C.int(y))
+}
+
+func (w *webview) Focus() {
+	C.webview_focus(w.w)
 }
 
 func (w *webview) Init(js string) {

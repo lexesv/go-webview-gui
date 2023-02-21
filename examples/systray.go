@@ -2,7 +2,12 @@ package main
 
 import "C"
 import (
+	"flag"
+	"fmt"
 	"os"
+	"os/exec"
+	"os/signal"
+	"syscall"
 
 	"github.com/lexesv/go-webview-gui"
 	"github.com/lexesv/go-webview-gui/dialog"
@@ -15,17 +20,78 @@ var (
 
 func main() {
 	var err error
+
+	// See NewWindow function
+	new_window := flag.Bool("new_window", false, "")
+	title := flag.String("title", "New Window", "")
+	width := flag.Int("width", 200, "")
+	height := flag.Int("height", 200, "")
+	hint := flag.String("hint", "none", "")
+	url := flag.String("url", "", "")
+	file := flag.String("file", "", "")
+	flag.Parse()
+	if *new_window {
+		NewWindow(title, width, height, hint, url, file)
+	}
+
 	iconData, err = os.ReadFile("icon.png")
 	if err != nil {
 		panic(err)
 	}
+
 	w := webview.New(false)
 	defer w.Destroy()
+
+	webview.Events.Handle = func(state int) {
+		fmt.Println(state)
+		switch state {
+		case webview.WEBVIEW_WINDOW_CLOSE:
+			w.Hide() // Click "Show" after
+		case webview.WEBVIEW_WINDOW_RESIZE:
+			// Example: save window size for restore in next launch
+		case webview.WEBVIEW_WINDOW_MOVE:
+			// Example: save window position for restore in next launch
+		}
+	}
+
 	systray.Register(onReady(w))
 	w.SetTitle("Systray Example")
 	//w.SetIconBites(iconData)
 	w.SetSize(480, 320, webview.HintNone)
 	w.SetHtml("Thanks for using Golang Webview GUI!")
+	w.Run()
+}
+
+// NewWindow  - WebView does not support creating a new instance from the current application.
+// Therefore, this is a possible option for creating a new window.
+func NewWindow(title *string, width *int, height *int, hint *string, url, file *string) {
+	w := webview.New(false)
+	defer w.Destroy()
+	webview.Events.Handle = func(state int) {
+		fmt.Println(state)
+		if state == webview.WEBVIEW_WINDOW_CLOSE {
+			w.Terminate()
+		}
+	}
+	w.SetTitle(*title)
+	var _hint webview.Hint
+	switch *hint {
+	case "none":
+		_hint = webview.HintNone
+	case "fixed":
+		_hint = webview.HintFixed
+	}
+	w.SetSize(*width, *height, _hint)
+	if *url != "" {
+		w.Navigate(*url)
+	} else if *file != "" {
+		if b, err := os.ReadFile(*file); err != nil {
+			fmt.Println(err)
+		} else {
+			w.SetHtml(string(b))
+		}
+
+	}
 	w.Run()
 }
 
@@ -39,6 +105,8 @@ func onReady(w webview.WebView) func() {
 			mGetSizePosition := systray.AddMenuItem("Get Size & Position", "")
 			mHide := systray.AddMenuItem("Hide", "")
 			mShow := systray.AddMenuItem("Show", "")
+			mFocus := systray.AddMenuItem("Focus", "")
+			mMove := systray.AddMenuItem("Move", "")
 			mMaximize := systray.AddMenuItem("Maximize", "")
 			mUnmaximize := systray.AddMenuItem("Unmaximize", "")
 			mMinimize := systray.AddMenuItem("Minimize", "")
@@ -50,16 +118,16 @@ func onReady(w webview.WebView) func() {
 			mSetBorderless := systray.AddMenuItem("SetBorderless", "")
 			mSetBordered := systray.AddMenuItem("SetBordered", "")
 			systray.AddSeparator()
-			mNewWebView := systray.AddMenuItem("NewWebView", "")
+			mNewWindow := systray.AddMenuItem("New Window", "")
 			systray.AddSeparator()
 			mQuit := systray.AddMenuItem("Quit                 ", "")
 
 			for {
 				select {
 				case <-mQuit.ClickedCh:
+					syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 					w.Terminate()
 				case <-mShowTitle.ClickedCh:
-					dialog.File().Filter("Mp3 audio file", "mp3").Load()
 					dialog.Message("%s", w.GetTitle()).Info()
 				case <-mGetSizePosition.ClickedCh:
 					width, height, hint := w.GetSize()
@@ -73,6 +141,17 @@ func onReady(w webview.WebView) func() {
 					w.Dispatch(func() {
 						w.Show()
 					})
+
+				case <-mFocus.ClickedCh:
+					w.Dispatch(func() {
+						w.Focus()
+					})
+
+				case <-mMove.ClickedCh:
+					w.Dispatch(func() {
+						w.Move(100, 100)
+					})
+
 				case <-mMaximize.ClickedCh:
 					w.Dispatch(func() {
 						w.Maximize()
@@ -113,15 +192,39 @@ func onReady(w webview.WebView) func() {
 					w.Dispatch(func() {
 						w.ExitFullScreen()
 					})
-				case <-mNewWebView.ClickedCh:
-					//NewWebView()
+				case <-mNewWindow.ClickedCh:
+					path, err := os.Executable()
+					if err != nil {
+						dialog.Message("%s", err.Error()).Error()
+						break
+					}
+					dir, err := os.Getwd()
+					if err != nil {
+						dialog.Message("%s", err.Error()).Error()
+						break
+					}
+					p := []string{
+						"-new_window",
+						"-title", "About",
+						"-width", "300",
+						"-height", "200",
+						"-hint", "fixed",
+						"-file", dir + "/about.html",
+					}
+					cmd := exec.Command(path, p...)
+					c := make(chan os.Signal, 2)
+					signal.Notify(c, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT)
+					go func() {
+						<-c
+						cmd.Process.Kill()
+						os.Exit(1)
+					}()
+					if err := cmd.Start(); err != nil {
+						dialog.Message("%s", err.Error()).Error()
+					}
 
 				}
 			}
 		}()
 	}
-}
-
-func onTrayExit() {
-	// clean up here
 }
