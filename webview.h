@@ -200,7 +200,7 @@ WEBVIEW_API void webview_exit_full_screen(webview_t w);
 
 WEBVIEW_API int webview_is_full_screen(webview_t w);
 
-WEBVIEW_API void webview_set_icon(webview_t w, const char *iconData);
+WEBVIEW_API void webview_set_icon(webview_t w, const char *icon_data, long icon_size);
 
 WEBVIEW_API void webview_set_always_ontop(webview_t w, int on_top);
 
@@ -290,6 +290,9 @@ WEBVIEW_API const webview_version_info_t *webview_version();
 #include <vector>
 
 #include <cstring>
+
+#include "func.h"
+
 
 namespace webview {
 
@@ -745,6 +748,7 @@ using browser_engine = detail::gtk_webkit_engine;
 #include <objc/NSObjCRuntime.h>
 #include <objc/objc-runtime.h>
 
+
 namespace webview {
 namespace detail {
 namespace objc {
@@ -982,17 +986,17 @@ public:
     return (windowStyleMask & NSWindowStyleMaskFullScreen) == NSWindowStyleMaskFullScreen;
   }
 
-  void set_icon(const char *iconData){
+
+  void set_icon(const char *icon_data, long icon_size){
     id icon = nullptr;
-    std::string iconDataStr = std::string(iconData);
     icon = ((id (*)(id, SEL))objc_msgSend)("NSImage"_cls, "alloc"_sel);
 
     id nsIconData = ((id (*)(id, SEL, const char*, int))objc_msgSend)("NSData"_cls,
-                "dataWithBytes:length:"_sel, iconDataStr.c_str(), iconDataStr.length());
+                "dataWithBytes:length:"_sel, icon_data, icon_size);
 
     ((void (*)(id, SEL, id))objc_msgSend)(icon, "initWithData:"_sel, nsIconData);
     ((void (*)(id, SEL, id))objc_msgSend)(((id (*)(id, SEL))objc_msgSend)("NSApplication"_cls,
-                                "sharedApplication"_sel), "setApplicationIconImage:"_sel,icon);
+                                "sharedApplication"_sel), "setApplicationIconImage:"_sel, icon);
   }
 
   void set_always_ontop(int on_top){
@@ -2612,8 +2616,8 @@ WEBVIEW_API int webview_is_full_screen(webview_t w) {
   return static_cast<webview::webview *>(w)->is_full_screen();
 }
 
-WEBVIEW_API void webview_set_icon(webview_t w, const char *iconData) {
-  static_cast<webview::webview *>(w)->set_icon(iconData);
+WEBVIEW_API void webview_set_icon(webview_t w, const char *icon_data, long icon_size) {
+  static_cast<webview::webview *>(w)->set_icon(icon_data, icon_size);
 }
 
 WEBVIEW_API void webview_set_always_ontop(webview_t w, int on_top) {

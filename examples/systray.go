@@ -21,7 +21,7 @@ var (
 func main() {
 	var err error
 
-	// See NewWindow function
+	// See NewInstance function
 	new_window := flag.Bool("new_window", false, "")
 	title := flag.String("title", "New Window", "")
 	width := flag.Int("width", 200, "")
@@ -31,7 +31,7 @@ func main() {
 	file := flag.String("file", "", "")
 	flag.Parse()
 	if *new_window {
-		NewWindow(title, width, height, hint, url, file)
+		NewInstance(title, width, height, hint, url, file)
 	}
 
 	iconData, err = os.ReadFile("icon.png")
@@ -42,34 +42,34 @@ func main() {
 	w := webview.New(false)
 	defer w.Destroy()
 
-	webview.Events.Handle = func(state int) {
-		fmt.Println(state)
+	webview.Events.Handle = func(state webview.WindowState) {
+		//fmt.Println(state)
 		switch state {
-		case webview.WEBVIEW_WINDOW_CLOSE:
+		case webview.WindowClose:
 			w.Hide() // Click "Show" after
-		case webview.WEBVIEW_WINDOW_RESIZE:
+		case webview.WindowResize:
 			// Example: save window size for restore in next launch
-		case webview.WEBVIEW_WINDOW_MOVE:
+		case webview.WindowMove:
 			// Example: save window position for restore in next launch
 		}
 	}
 
 	systray.Register(onReady(w))
 	w.SetTitle("Systray Example")
-	//w.SetIconBites(iconData)
+	w.SetIconBites(iconData, len(iconData))
 	w.SetSize(480, 320, webview.HintNone)
 	w.SetHtml("Thanks for using Golang Webview GUI!")
 	w.Run()
 }
 
-// NewWindow  - WebView does not support creating a new instance from the current application.
+// NewInstance  - WebView does not support creating a new instance from the current application.
 // Therefore, this is a possible option for creating a new window.
-func NewWindow(title *string, width *int, height *int, hint *string, url, file *string) {
+func NewInstance(title *string, width *int, height *int, hint *string, url, file *string) {
 	w := webview.New(false)
 	defer w.Destroy()
-	webview.Events.Handle = func(state int) {
+	webview.Events.Handle = func(state webview.WindowState) {
 		fmt.Println(state)
-		if state == webview.WEBVIEW_WINDOW_CLOSE {
+		if state == webview.WindowClose {
 			w.Terminate()
 		}
 	}
@@ -125,7 +125,7 @@ func onReady(w webview.WebView) func() {
 			for {
 				select {
 				case <-mQuit.ClickedCh:
-					syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+					syscall.Kill(syscall.Getpid(), syscall.SIGINT) // kill child window/s
 					w.Terminate()
 				case <-mShowTitle.ClickedCh:
 					dialog.Message("%s", w.GetTitle()).Info()

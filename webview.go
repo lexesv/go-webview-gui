@@ -39,6 +39,8 @@ func init() {
 // Hints are used to configure window sizing and resizing
 type Hint int
 
+type WindowState int
+
 const (
 	// Width and height are default size
 	HintNone = C.WEBVIEW_HINT_NONE
@@ -52,13 +54,13 @@ const (
 	// Width and height are maximum bounds
 	HintMax = C.WEBVIEW_HINT_MAX
 
-	WEBVIEW_WINDOW_CLOSE      = 0
-	WEBVIEW_WINDOW_FOCUS      = 1
-	WEBVIEW_WINDOW_BLUR       = 2
-	WEBVIEW_WINDOW_MOVE       = 4
-	WEBVIEW_WINDOW_RESIZE     = 5
-	WEBVIEW_WINDOW_FULLSCREEN = 3   // GTK only
-	WEBVIEW_WINDOW_UNDEFINED  = 100 // GTK only
+	WindowClose      = C.WEBVIEW_WINDOW_CLOSE      //0
+	WindowFocus      = C.WEBVIEW_WINDOW_FOCUS      // 1
+	WindowBlur       = C.WEBVIEW_WINDOW_BLUR       // 2
+	WindowMove       = C.WEBVIEW_WINDOW_MOVE       // 4
+	WindowResize     = C.WEBVIEW_WINDOW_RESIZE     // 5
+	WindowFullScreen = C.WEBVIEW_WINDOW_FULLSCREEN // 3   // GTK only
+	WindowUndefined  = C.WEBVIEW_WINDOW_UNDEFINED  // 100 // GTK only
 )
 
 type WebView interface {
@@ -137,16 +139,12 @@ type WebView interface {
 	ExitFullScreen()
 	IsFullScreen() bool
 	SetIcon(icon string) error
-	SetIconBites(b []byte)
+	SetIconBites(b []byte, size int)
 	SetAlwaysOnTop(onTop bool)
 	GetSize() (width int, height int, hint Hint)
 	GetPosition() (x, y int)
 	Move(x, y int)
 	Focus()
-	/*
-	 focus();
-	 move();
-	*/
 }
 
 type webview struct {
@@ -155,7 +153,7 @@ type webview struct {
 }
 
 type EventHandler struct {
-	Handle func(state int)
+	Handle func(state WindowState)
 }
 
 var (
@@ -175,7 +173,7 @@ func boolToInt(b bool) C.int {
 
 //export event_handler
 func event_handler(state C.int) {
-	Events.Handle(int(state))
+	Events.Handle(WindowState(state))
 }
 
 // New calls NewWindow to create a new window and a new webview instance. If debug
@@ -350,17 +348,15 @@ func (w *webview) SetIcon(icon string) error {
 	if err != nil {
 		return err
 	}
-	s := C.CString(string(b))
-	defer C.free(unsafe.Pointer(s))
-	C.webview_set_icon(w.w, s)
+	C.webview_set_icon(w.w, C.CString(string(b)), C.long(len(b)))
 	return nil
 }
 
-func (w *webview) SetIconBites(b []byte) {
+func (w *webview) SetIconBites(b []byte, size int) {
 	//p := C.CBytes(b)
 	//defer C.free(unsafe.Pointer(p))
 	//C.webview_set_icon(w.w, (*C.char)(unsafe.Pointer(&b[0])))
-	C.webview_set_icon(w.w, C.CString(string(b)))
+	C.webview_set_icon(w.w, C.CString(string(b)), C.long(size))
 }
 
 func (w *webview) SetAlwaysOnTop(onTop bool) {
