@@ -242,6 +242,13 @@ Calling `Eval()` or `Dispatch()` before `Run()` does not work because the webvie
 
 * Cross-platform webview library: MIT from [webview/webview](https://github.com/webview/webview). Copyright (c) 2017 Serge Zaitsev.
 * Simple cross-platform dialog API for go-lang. ISC License from [sqweek/dialog](https://github.com/sqweek/dialog). Copyright (c) 2018, the dialog authors.
+* Systray is a cross-platform Go library to place an icon and menu in the notification area, with webview support! Apache License 2.0 from [ghostiam/systray](https://github.com/ghostiam/systray)
+
+
+## Credits
+
+* https://github.com/xilp/systray
+* https://github.com/cratonica/trayhost
 
 
 ## License
