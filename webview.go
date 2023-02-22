@@ -55,7 +55,7 @@ const (
 	// Width and height are maximum bounds
 	HintMax = C.WEBVIEW_HINT_MAX
 
-	WindowClose      = C.WEBVIEW_WINDOW_CLOSE      //0
+	WindowClose      = C.WEBVIEW_WINDOW_CLOSE      // 0
 	WindowFocus      = C.WEBVIEW_WINDOW_FOCUS      // 1
 	WindowBlur       = C.WEBVIEW_WINDOW_BLUR       // 2
 	WindowMove       = C.WEBVIEW_WINDOW_MOVE       // 4
@@ -140,52 +140,57 @@ type WebView interface {
 	// SetBordered activates the bordered mode.
 	SetBordered()
 
-	// IsMaximized If the native window is maximized it returns true, otherwise false
+	// IsMaximized If the native window is maximized it returns true, otherwise false.
 	IsMaximized() bool
 
-	// Maximize maximizes the native window
+	// Maximize maximizes the native window.
 	Maximize()
 
-	// Unmaximize unmaximizes the native window
+	// Unmaximize unmaximizes the native window.
 	Unmaximize()
 
-	// Minimize minimizes the native window
+	// Minimize minimizes the native window.
 	Minimize()
 
-	// Unminimize unminimizes the native window
+	// Unminimize unminimizes the native window.
 	Unminimize()
 
-	// IsVisible If the native window is visible it returns true, otherwise false
+	// IsVisible If the native window is visible it returns true, otherwise false.
 	IsVisible() bool
 
 	// SetFullScreen activates the full-screen mode.
 	SetFullScreen()
 
-	// ExitFullScreen exits full-screen mode
+	// ExitFullScreen exits full-screen mode.
 	ExitFullScreen()
 
-	// IsFullScreen If the native window is in full-screen mode it returns true, otherwise false
+	// IsFullScreen If the native window is in full-screen mode it returns true, otherwise false.
 	IsFullScreen() bool
 
-	// SetIcon sets the application icon (from filename)
+	// SetIcon sets the application icon (from filename).
 	// Example:
 	// w.SetIcon("icon.png")
 	SetIcon(icon string) error
 
-	// SetIconBites sets the application icon (from []byte)
+	// SetIconBites sets the application icon (from []byte).
 	// Example:
 	// iconData, err = os.ReadFile("icon.png")
 	// w.SetIconBites(iconData, len(iconData))
 	SetIconBites(b []byte, size int)
 
+	// SetAlwaysOnTop activates (=true) / deactivates(=false) the top-most mode.
 	SetAlwaysOnTop(onTop bool)
 
+	// GetSize gets the size of the native window.
 	GetSize() (width int, height int, hint Hint)
 
+	// GetPosition gets the coordinates of the native window.
 	GetPosition() (x, y int)
 
+	// Move moves the native window to the specified coordinates.
 	Move(x, y int)
 
+	// Focus set the focus on the native window.
 	Focus()
 }
 
@@ -404,9 +409,6 @@ func (w *webview) SetIcon(icon string) error {
 }
 
 func (w *webview) SetIconBites(b []byte, size int) {
-	//p := C.CBytes(b)
-	//defer C.free(unsafe.Pointer(p))
-	//C.webview_set_icon(w.w, (*C.char)(unsafe.Pointer(&b[0])))
 	C.webview_set_icon(w.w, C.CString(string(b)), C.long(size))
 }
 
