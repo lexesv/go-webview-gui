@@ -68,7 +68,7 @@ func NewInstance(title *string, width *int, height *int, hint *string, url, file
 	w := webview.New(false)
 	defer w.Destroy()
 	webview.Events.Handle = func(state webview.WindowState) {
-		fmt.Println(state)
+		//fmt.Println(state)
 		if state == webview.WindowClose {
 			w.Terminate()
 		}

@@ -36,9 +36,10 @@ func init() {
 	runtime.LockOSThread()
 }
 
-// Hints are used to configure window sizing and resizing
+// Hint are used to configure window sizing and resizing
 type Hint int
 
+// WindowState used when changing the native window status
 type WindowState int
 
 const (
@@ -124,26 +125,67 @@ type WebView interface {
 	// f must return either value and error or just error
 	Bind(name string, f interface{}) error
 
+	// GetTitle gets the title of the native window.
 	GetTitle() string
+
+	// Hide hides the native window.
 	Hide()
+
+	// Show shows the native window.
 	Show()
+
+	// SetBorderless activates the borderless mode.
 	SetBorderless()
+
+	// SetBordered activates the bordered mode.
 	SetBordered()
+
+	// IsMaximized If the native window is maximized it returns true, otherwise false
 	IsMaximized() bool
+
+	// Maximize maximizes the native window
 	Maximize()
+
+	// Unmaximize unmaximizes the native window
 	Unmaximize()
+
+	// Minimize minimizes the native window
 	Minimize()
+
+	// Unminimize unminimizes the native window
 	Unminimize()
+
+	// IsVisible If the native window is visible it returns true, otherwise false
 	IsVisible() bool
+
+	// SetFullScreen activates the full-screen mode.
 	SetFullScreen()
+
+	// ExitFullScreen exits full-screen mode
 	ExitFullScreen()
+
+	// IsFullScreen If the native window is in full-screen mode it returns true, otherwise false
 	IsFullScreen() bool
+
+	// SetIcon sets the application icon (from filename)
+	// Example:
+	// w.SetIcon("icon.png")
 	SetIcon(icon string) error
+
+	// SetIconBites sets the application icon (from []byte)
+	// Example:
+	// iconData, err = os.ReadFile("icon.png")
+	// w.SetIconBites(iconData, len(iconData))
 	SetIconBites(b []byte, size int)
+
 	SetAlwaysOnTop(onTop bool)
+
 	GetSize() (width int, height int, hint Hint)
+
 	GetPosition() (x, y int)
+
 	Move(x, y int)
+
 	Focus()
 }
 
@@ -152,6 +194,15 @@ type webview struct {
 	Hint Hint
 }
 
+// EventHandler It is used to intercept changes in the status of the native window
+// Example:
+//
+//	webview.Events.Handle = func(state webview.WindowState) {
+//			fmt.Println(state)
+//			if state == webview.WindowClose {
+//				w.Terminate() or example w.Hide()
+//			}
+//		}
 type EventHandler struct {
 	Handle func(state WindowState)
 }
