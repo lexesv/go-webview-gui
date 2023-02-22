@@ -16,7 +16,7 @@ Windows  | [Windows API][win32-api], [WebView2][ms-webview2]
 
 ## Documentation
 
-See [doc.md]()
+See [doc.md](doc.md)
 
 ## Prerequisites
 
