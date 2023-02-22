@@ -1,10 +1,10 @@
 # Golang Webview GUI
 
-A tiny cross-platform webview library for C/C++/Go to build modern cross-platform GUIs.
+A tiny cross-platform webview library for Go to build modern cross-platform GUIs.
 
 The goal of the project is to create a common HTML5 UI abstraction layer for the most widely used platforms.
 
-It supports two-way JavaScript bindings (to call JavaScript from C/C++/Go and to call C/C++/Go from JavaScript).
+It supports two-way JavaScript bindings (to call JavaScript from Go and to call Go from JavaScript).
 
 ## Platform Support
 
@@ -15,7 +15,6 @@ macOS    | Cocoa, [WebKit][webkit]
 Windows  | [Windows API][win32-api], [WebView2][ms-webview2]
 
 ## Documentation
-
 
 ## Prerequisites
 
@@ -28,19 +27,20 @@ The [GTK][gtk] and [WebKit2GTK][webkitgtk] libraries are required for developmen
 Debian-based systems:
 
 * Packages:
-  * Development: `apt install libgtk-3-dev libwebkit2gtk-4.0-dev`
-  * Production: `apt install libgtk-3-0 libwebkit2gtk-4.0-37`
+    * Development: `apt install libgtk-3-dev libwebkit2gtk-4.0-dev`
+    * Production: `apt install libgtk-3-0 libwebkit2gtk-4.0-37`
 
 Fedora-based systems:
 
 * Packages:
-  * Development: `dnf install gtk3-devel webkit2gtk4.0-devel`
-  * Production: `dnf install gtk3 webkit2gtk4.0`
+    * Development: `dnf install gtk3-devel webkit2gtk4.0-devel`
+    * Production: `dnf install gtk3 webkit2gtk4.0`
 
 BSD-based systems:
 
 * FreeBSD packages: `pkg install webkit2-gtk3`
-* Execution on BSD-based systems may require adding the `wxallowed` option (see [mount(8)](https://man.openbsd.org/mount.8))  to your fstab to bypass [W^X](https://en.wikipedia.org/wiki/W%5EX "write xor execute") memory protection for your executable. Please see if it works without disabling this security feature first.
+* Execution on BSD-based systems may require adding the `wxallowed` option (see [mount(8)](https://man.openbsd.org/mount.8))  to your fstab to bypass [W^X](https://en.wikipedia.org/wiki/W%5EX "write xor execute") memory protection for your
+  executable. Please see if it works without disabling this security feature first.
 
 ### Windows
 
@@ -54,7 +54,8 @@ Developers and end-users must have the [WebView2 runtime][ms-webview2-rt] instal
 
 If you are a developer of this project then please go to the [development section](#development).
 
-Instructions here are written for GCC when compiling C/C++ code using Unix-style command lines, and assumes that multiple commands are executed in the same shell session. Command lines for Windows use syntax specific to the Command shell but you can use any shell such as PowerShell as long as you adapt the commands accordingly. See the [MinGW-w64 requirements](#mingw-w64-requirements) when building on Windows.
+Instructions here are written for GCC when compiling C/C++ code using Unix-style command lines, and assumes that multiple commands are executed in the same shell session. Command lines for Windows use syntax specific to the Command shell
+but you can use any shell such as PowerShell as long as you adapt the commands accordingly. See the [MinGW-w64 requirements](#mingw-w64-requirements) when building on Windows.
 
 You will have a working app but you are encouraged to explore the [available examples][examples] and try the ones that go beyond the mere basics.
 
@@ -82,15 +83,6 @@ copy /Y libs\webview2\build\native\x64\WebView2Loader.dll build
 
 > **Note:** See the [WebView2 loader section](#ms-webview2-loader) for more options.
 
-### C/C++ Preparation
-
-Fetch the webview library:
-
-```sh
-curl -sSLo "libs/webview/webview.h" "https://raw.githubusercontent.com/webview/webview/master/webview.h"
-curl -sSLo "libs/webview/webview.cc" "https://raw.githubusercontent.com/webview/webview/master/webview.cc"
-```
-
 
 ### Getting Started with Go
 
@@ -113,7 +105,7 @@ set CGO_CXXFLAGS="-I%cd%\libs\webview2\build\native\include"
 Save the basic Go example into your project directory:
 
 ```sh
-curl -sSLo basic.go "https://raw.githubusercontent.com/webview/webview/master/examples/basic.go"
+curl -sSLo basic.go "https://raw.githubusercontent.com/lexesv/go-webview-gui/main/examples/basic.go"
 ```
 
 Install dependencies:
@@ -161,7 +153,8 @@ Read more about the [structure of bundles][macos-app-bundle] at the Apple Develo
 
 ### Windows Apps
 
-You would typically create a resource script file (`*.rc`) with information about the app as well as an icon. Since you should have MinGW-w64 readily available then you can compile the file using `windres` and link it into your program. If you instead use Visual C++ then look into the [Windows Resource Compiler][win32-rc].
+You would typically create a resource script file (`*.rc`) with information about the app as well as an icon. Since you should have MinGW-w64 readily available then you can compile the file using `windres` and link it into your program. If
+you instead use Visual C++ then look into the [Windows Resource Compiler][win32-rc].
 
 The directory structure could look like this:
 
@@ -175,6 +168,7 @@ my-project/
 ```
 
 `resources.rc`:
+
 ```
 100 ICON "icons\\application.ico"
 32512 ICON "icons\\window.ico"
@@ -183,6 +177,7 @@ my-project/
 > **Note:** The ID of the icon resource to be used for the window must be `32512` (`IDI_APPLICATION`).
 
 Compile:
+
 ```sh
 windres -o build/resources.o resources.rc
 g++ basic.cc build/resources.o [...]
@@ -215,8 +210,10 @@ Here are some of the noteworthy ways our implementation of the loader differs fr
 
 The following compile-time options can be used to change how the library integrates the WebView2 loader:
 
-* `WEBVIEW_MSWEBVIEW2_BUILTIN_IMPL=<1|0>` - Enables or disables the built-in implementation of the WebView2 loader. Enabling this avoids the need for `WebView2Loader.dll` but if the DLL is present then the DLL takes priority. This option is enabled by default.
-* `WEBVIEW_MSWEBVIEW2_EXPLICIT_LINK=<1|0>` - Enables or disables explicit linking of `WebView2Loader.dll`. Enabling this avoids the need for import libraries (`*.lib`). This option is enabled by default if `WEBVIEW_MSWEBVIEW2_BUILTIN_IMPL` is enabled.
+* `WEBVIEW_MSWEBVIEW2_BUILTIN_IMPL=<1|0>` - Enables or disables the built-in implementation of the WebView2 loader. Enabling this avoids the need for `WebView2Loader.dll` but if the DLL is present then the DLL takes priority. This option is
+  enabled by default.
+* `WEBVIEW_MSWEBVIEW2_EXPLICIT_LINK=<1|0>` - Enables or disables explicit linking of `WebView2Loader.dll`. Enabling this avoids the need for import libraries (`*.lib`). This option is enabled by default if `WEBVIEW_MSWEBVIEW2_BUILTIN_IMPL`
+  is enabled.
 
 ## Development
 
@@ -228,7 +225,8 @@ To build the library, examples and run tests, run `script/build.sh` on Unix-base
 
 ### Browser Features
 
-Since a browser engine is not a full web browser it may not support every feature you may expect from a browser. If you find that a feature does not work as expected then please consult with the browser engine's documentation and [open an issue][issues-new] if you think that the library should support it.
+Since a browser engine is not a full web browser it may not support every feature you may expect from a browser. If you find that a feature does not work as expected then please consult with the browser engine's documentation
+and [open an issue][issues-new] if you think that the library should support it.
 
 For example, the library does not attempt to support user interaction features like `alert()`, `confirm()` and `prompt()` and other non-essential features like `console.log()`.
 
@@ -236,37 +234,49 @@ For example, the library does not attempt to support user interaction features l
 
 Calling `Eval()` or `Dispatch()` before `Run()` does not work because the webview instance has only been configured and not yet started.
 
-
 ## Licenses and Copyrights
 
 * Cross-platform webview library: MIT from [webview/webview](https://github.com/webview/webview). Copyright (c) 2017 Serge Zaitsev.
 * Simple cross-platform dialog API for go-lang. ISC License from [sqweek/dialog](https://github.com/sqweek/dialog). Copyright (c) 2018, the dialog authors.
 * Systray is a cross-platform Go library to place an icon and menu in the notification area, with webview support! Apache License 2.0 from [ghostiam/systray](https://github.com/ghostiam/systray)
 
-
 ## Credits
 
 * https://github.com/xilp/systray
 * https://github.com/cratonica/trayhost
-
 
 ## License
 
 Code is distributed under MIT license, feel free to use it in your proprietary projects as well.
 
 [macos-app-bundle]:  https://developer.apple.com/library/archive/documentation/CoreFoundation/Conceptual/CFBundles/BundleTypes/BundleTypes.html
+
 [docs-repo]:         https://github.com/webview/docs
+
 [examples]:          https://github.com/webview/webview/tree/master/examples
+
 [go-docs]:           https://pkg.go.dev/github.com/webview/webview
+
 [gtk]:               https://docs.gtk.org/gtk3/
+
 [issues]:            https://github.com/webview/docs/issues
+
 [issues-new]:        https://github.com/webview/webview/issues/new
+
 [webkit]:            https://webkit.org/
+
 [webkitgtk]:         https://webkitgtk.org/
+
 [webview]:           https://github.com/webview/webview
+
 [webview.dev]:       https://webview.dev
+
 [ms-webview2]:       https://developer.microsoft.com/en-us/microsoft-edge/webview2/
+
 [ms-webview2-sdk]:   https://www.nuget.org/packages/Microsoft.Web.WebView2
+
 [ms-webview2-rt]:    https://developer.microsoft.com/en-us/microsoft-edge/webview2/
+
 [win32-api]:         https://docs.microsoft.com/en-us/windows/win32/apiindex/windows-api-list
+
 [win32-rc]:          https://docs.microsoft.com/en-us/windows/win32/menurc/resource-compiler
