@@ -238,6 +238,12 @@ For example, the library does not attempt to support user interaction features l
 Calling `Eval()` or `Dispatch()` before `Run()` does not work because the webview instance has only been configured and not yet started.
 
 
+## Licenses and Copyrights
+
+* Cross-platform webview library: MIT from [webview/webview](https://github.com/webview/webview). Copyright (c) 2017 Serge Zaitsev.
+* Simple cross-platform dialog API for go-lang. ISC License from [sqweek/dialog](https://github.com/sqweek/dialog). Copyright (c) 2018, the dialog authors.
+
+
 ## License
 
 Code is distributed under MIT license, feel free to use it in your proprietary projects as well.
