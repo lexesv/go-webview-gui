@@ -8,11 +8,11 @@ It supports two-way JavaScript bindings (to call JavaScript from Go and to call 
 
 ## Platform Support
 
-Platform | Technologies
--------- | ------------
-Linux    | [GTK 3][gtk], [WebKitGTK][webkitgtk]
-macOS    | Cocoa, [WebKit][webkit]
-Windows  | [Windows API][win32-api], [WebView2][ms-webview2]
+| Platform | Technologies                                      |
+|----------|---------------------------------------------------|
+| Linux    | [GTK 3][gtk], [WebKitGTK][webkitgtk]              |
+| macOS    | Cocoa, [WebKit][webkit]                           |
+| Windows  | [Windows API][win32-api], [WebView2][ms-webview2] |
 
 ## Documentation
 
@@ -258,25 +258,11 @@ Code is distributed under MIT license, feel free to use it in your proprietary p
 
 [macos-app-bundle]:  https://developer.apple.com/library/archive/documentation/CoreFoundation/Conceptual/CFBundles/BundleTypes/BundleTypes.html
 
-[docs-repo]:         https://github.com/webview/docs
-
-[examples]:          https://github.com/webview/webview/tree/master/examples
-
-[go-docs]:           https://pkg.go.dev/github.com/webview/webview
-
 [gtk]:               https://docs.gtk.org/gtk3/
-
-[issues]:            https://github.com/webview/docs/issues
-
-[issues-new]:        https://github.com/webview/webview/issues/new
 
 [webkit]:            https://webkit.org/
 
 [webkitgtk]:         https://webkitgtk.org/
-
-[webview]:           https://github.com/webview/webview
-
-[webview.dev]:       https://webview.dev
 
 [ms-webview2]:       https://developer.microsoft.com/en-us/microsoft-edge/webview2/
 
