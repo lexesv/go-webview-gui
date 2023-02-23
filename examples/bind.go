@@ -22,7 +22,7 @@ type IncrementResult struct {
 
 func main() {
 	var count uint = 0
-	w := webview.New(false)
+	w := webview.New(false, true)
 	defer w.Destroy()
 	w.SetTitle("Bind Example")
 	w.SetSize(480, 320, webview.HintNone)

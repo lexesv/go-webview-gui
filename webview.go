@@ -125,6 +125,9 @@ type WebView interface {
 	// f must return either value and error or just error
 	Bind(name string, f interface{}) error
 
+	// SetEventsHandler sets the event handling function
+	SetEventsHandler(f func(state WindowState))
+
 	// GetTitle gets the title of the native window.
 	GetTitle() string
 
@@ -201,15 +204,11 @@ type webview struct {
 
 // EventHandler It is used to intercept changes in the status of the native window
 // Example:
-//
-//	webview.Events.Handle = func(state webview.WindowState) {
-//			fmt.Println(state)
-//			if state == webview.WindowClose {
-//				w.Terminate() or example w.Hide()
-//			}
-//		}
-type EventHandler struct {
-	Handle func(state WindowState)
+
+type eventsHandler struct {
+	handle      func(state WindowState)
+	exitOnClose bool
+	exitFunc    func()
 }
 
 var (
@@ -217,7 +216,7 @@ var (
 	index    uintptr
 	dispatch = map[uintptr]func(){}
 	bindings = map[uintptr]func(id, req string) (interface{}, error){}
-	Events   = EventHandler{}
+	events   = eventsHandler{}
 )
 
 func boolToInt(b bool) C.int {
@@ -229,18 +228,25 @@ func boolToInt(b bool) C.int {
 
 //export event_handler
 func event_handler(state C.int) {
-	Events.Handle(WindowState(state))
+	events.handle(WindowState(state))
+	if state == WindowClose {
+		if events.exitOnClose {
+			events.exitFunc()
+		}
+	}
 }
 
 // New calls NewWindow to create a new window and a new webview instance. If debug
 // is non-zero - developer tools will be enabled (if the platform supports them).
-func New(debug bool) WebView {
+func New(debug, exitOnClose bool) WebView {
 	res := C.webview_create(boolToInt(debug), nil)
 	if res == nil {
 		return nil
 	}
-	C.webview_set_event_handler(C.closure(C.event_handler))
-	return &webview{w: res}
+	w := &webview{w: res}
+	events.exitOnClose = exitOnClose
+	events.exitFunc = w.Terminate
+	return w
 }
 
 func (w *webview) Destroy() {
@@ -248,7 +254,15 @@ func (w *webview) Destroy() {
 }
 
 func (w *webview) Run() {
+	if events.handle == nil {
+		w.SetEventsHandler(func(state WindowState) {})
+	}
+	C.webview_set_event_handler(C.closure(C.event_handler))
 	C.webview_run(w.w)
+}
+
+func (w *webview) SetEventsHandler(f func(state WindowState)) {
+	events.handle = f
 }
 
 func (w *webview) Terminate() {

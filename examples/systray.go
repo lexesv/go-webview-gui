@@ -28,10 +28,9 @@ func main() {
 	height := flag.Int("height", 200, "")
 	hint := flag.String("hint", "none", "")
 	url := flag.String("url", "", "")
-	file := flag.String("file", "", "")
 	flag.Parse()
 	if *new_window {
-		NewInstance(title, width, height, hint, url, file)
+		NewInstance(title, width, height, hint, url)
 	}
 
 	iconData, err = os.ReadFile("icon.png")
@@ -39,10 +38,10 @@ func main() {
 		panic(err)
 	}
 
-	w := webview.New(false)
+	w := webview.New(false, false)
 	defer w.Destroy()
 
-	webview.Events.Handle = func(state webview.WindowState) {
+	w.SetEventsHandler(func(state webview.WindowState) {
 		//fmt.Println(state)
 		switch state {
 		case webview.WindowClose:
@@ -52,7 +51,7 @@ func main() {
 		case webview.WindowMove:
 			// Example: save window position for restore in next launch
 		}
-	}
+	})
 
 	systray.Register(onReady(w))
 	w.SetTitle("Systray Example")
@@ -64,15 +63,9 @@ func main() {
 
 // NewInstance  - WebView does not support creating a new instance from the current application.
 // Therefore, this is a possible option for creating a new window.
-func NewInstance(title *string, width *int, height *int, hint *string, url, file *string) {
-	w := webview.New(false)
+func NewInstance(title *string, width *int, height *int, hint *string, url *string) {
+	w := webview.New(false, true)
 	defer w.Destroy()
-	webview.Events.Handle = func(state webview.WindowState) {
-		//fmt.Println(state)
-		if state == webview.WindowClose {
-			w.Terminate()
-		}
-	}
 	w.SetTitle(*title)
 	var _hint webview.Hint
 	switch *hint {
@@ -81,17 +74,9 @@ func NewInstance(title *string, width *int, height *int, hint *string, url, file
 	case "fixed":
 		_hint = webview.HintFixed
 	}
+	fmt.Println(*width, *height, _hint)
 	w.SetSize(*width, *height, _hint)
-	if *url != "" {
-		w.Navigate(*url)
-	} else if *file != "" {
-		if b, err := os.ReadFile(*file); err != nil {
-			fmt.Println(err)
-		} else {
-			w.SetHtml(string(b))
-		}
-
-	}
+	w.Navigate(*url)
 	w.Run()
 }
 
@@ -209,9 +194,10 @@ func onReady(w webview.WebView) func() {
 						"-width", "300",
 						"-height", "200",
 						"-hint", "fixed",
-						"-file", dir + "/about.html",
+						"-url", "file://" + dir + "/about.html",
 					}
 					cmd := exec.Command(path, p...)
+					//fmt.Println(cmd.Args)
 					c := make(chan os.Signal, 2)
 					signal.Notify(c, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT)
 					go func() {
