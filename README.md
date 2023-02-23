@@ -244,8 +244,10 @@ Calling `Eval()` or `Dispatch()` before `Run()` does not work because the webvie
 
 ## Credits
 
+* https://github.com/neutralinojs/neutralinojs
 * https://github.com/xilp/systray
 * https://github.com/cratonica/trayhost
+
 
 ## License
 
