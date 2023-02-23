@@ -126,6 +126,17 @@ type WebView interface {
 	Bind(name string, f interface{}) error
 
 	// SetEventsHandler sets the event handling function
+	// Example:
+	// w.SetEventsHandler(func(state webview.WindowState) {
+	//		switch state {
+	//		case webview.WindowClose:
+	//			w.Hide()
+	//		case webview.WindowResize:
+	//			// Example: save window size for restore in next launch
+	//		case webview.WindowMove:
+	//			// Example: save window position for restore in next launch
+	//		}
+	//	})
 	SetEventsHandler(f func(state WindowState))
 
 	// GetTitle gets the title of the native window.
@@ -203,8 +214,6 @@ type webview struct {
 }
 
 // EventHandler It is used to intercept changes in the status of the native window
-// Example:
-
 type eventsHandler struct {
 	handle      func(state WindowState)
 	exitOnClose bool
