@@ -114,6 +114,7 @@ type WebView interface {
     Bind(name string, f interface{}) error
 
     // SetEventsHandler sets the event handling function
+    // Should be called before calling the "Run" method
     // Example:
     // w.SetEventsHandler(func(state webview.WindowState) {
     //		switch state {
@@ -125,7 +126,7 @@ type WebView interface {
     //			// Example: save window position for restore in next launch
     //		}
     //	})
-    SetEventsHandler(f func(state WindowState))
+    SetWindowEventsHandler(f func(state WindowState))
 
     // GetTitle gets the title of the native window.
     GetTitle() string

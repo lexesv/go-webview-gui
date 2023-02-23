@@ -41,7 +41,7 @@ func main() {
 	w := webview.New(false, false)
 	defer w.Destroy()
 
-	w.SetEventsHandler(func(state webview.WindowState) {
+	w.SetWindowEventsHandler(func(state webview.WindowState) {
 		//fmt.Println(state)
 		switch state {
 		case webview.WindowClose:

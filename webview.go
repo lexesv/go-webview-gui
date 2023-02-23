@@ -138,7 +138,7 @@ type WebView interface {
 	//			// Example: save window position for restore in next launch
 	//		}
 	//	})
-	SetEventsHandler(f func(state WindowState))
+	SetWindowEventsHandler(f func(state WindowState))
 
 	// GetTitle gets the title of the native window.
 	GetTitle() string
@@ -263,13 +263,13 @@ func (w *webview) Destroy() {
 
 func (w *webview) Run() {
 	if events.handle == nil {
-		w.SetEventsHandler(func(state WindowState) {})
+		w.SetWindowEventsHandler(func(state WindowState) {})
 	}
 	C.webview_set_event_handler(C.closure(C.event_handler))
 	C.webview_run(w.w)
 }
 
-func (w *webview) SetEventsHandler(f func(state WindowState)) {
+func (w *webview) SetWindowEventsHandler(f func(state WindowState)) {
 	events.handle = f
 }
 
