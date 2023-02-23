@@ -18,6 +18,9 @@ Windows  | [Windows API][win32-api], [WebView2][ms-webview2]
 
 See [DOC.md](DOC.md)
 
+## Examples
+See [Examples](https://github.com/lexesv/go-webview-gui/tree/main/examples)
+
 ## Prerequisites
 
 Your compiler must support minimum C++11 except for platforms that require a more modern version.
