@@ -8,7 +8,7 @@ import (
 
 func main() {
 
-	w := webview.New(true, false)
+	w := webview.New(true, true)
 	defer w.Destroy()
 
 	w.SetTitle("Basic Example")

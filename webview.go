@@ -126,6 +126,7 @@ type WebView interface {
 	Bind(name string, f interface{}) error
 
 	// SetEventsHandler sets the event handling function
+	// Should be called before calling the "Run" method
 	// Example:
 	// w.SetEventsHandler(func(state webview.WindowState) {
 	//		switch state {
@@ -238,10 +239,8 @@ func boolToInt(b bool) C.int {
 //export event_handler
 func event_handler(state C.int) {
 	events.handle(WindowState(state))
-	if state == WindowClose {
-		if events.exitOnClose {
-			events.exitFunc()
-		}
+	if state == WindowClose && events.exitOnClose {
+		events.exitFunc()
 	}
 }
 
