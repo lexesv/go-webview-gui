@@ -176,6 +176,8 @@ WEBVIEW_API void webview_hide(webview_t w);
 
 WEBVIEW_API void webview_show(webview_t w);
 
+WEBVIEW_API void webview_set_user_agent(webview_t w, const char *ua);
+
 WEBVIEW_API void webview_set_borderless(webview_t w);
 
 WEBVIEW_API const char *webview_get_title(webview_t w);
@@ -878,6 +880,7 @@ public:
     }
     objc::msg_send<void>(m_window, "center"_sel);
   }
+
   void navigate(const std::string &url) {
     auto nsurl = objc::msg_send<id>(
         "NSURL"_cls, "URLWithString:"_sel,
@@ -888,6 +891,7 @@ public:
         m_webview, "loadRequest:"_sel,
         objc::msg_send<id>("NSURLRequest"_cls, "requestWithURL:"_sel, nsurl));
   }
+
   void set_html(const std::string &html) {
     objc::msg_send<void>(m_webview, "loadHTMLString:baseURL:"_sel,
                          objc::msg_send<id>("NSString"_cls,
@@ -895,6 +899,7 @@ public:
                                             html.c_str()),
                          nullptr);
   }
+
   void init(const std::string &js) {
     // Equivalent Obj-C:
     // [m_manager addUserScript:[[WKUserScript alloc] initWithSource:[NSString stringWithUTF8String:js.c_str()] injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:YES]]
@@ -907,6 +912,7 @@ public:
                                               js.c_str()),
                            WKUserScriptInjectionTimeAtDocumentStart, YES));
   }
+
   void eval(const std::string &js) {
     objc::msg_send<void>(m_webview, "evaluateJavaScript:completionHandler:"_sel,
                          objc::msg_send<id>("NSString"_cls,
@@ -916,8 +922,6 @@ public:
   }
 
   void hide() {
-    /*((void (*)(id, SEL, bool))objc_msgSend)((id) m_window,
-                "setIsVisible:"_sel, false);*/
     objc::msg_send<void>(m_window, "setIsVisible:"_sel, false);
   }
 
@@ -925,89 +929,118 @@ public:
     objc::msg_send<void>(m_window, "setIsVisible:"_sel, true);
   }
 
+  void set_user_agent(const std::string &ua) {
+    //objc::msg_send<void>(m_window, "customUserAgent:"_sel, ua);
+    objc::msg_send<void>(m_webview, "setCustomUserAgent:"_sel,
+                         objc::msg_send<id>("NSString"_cls, "stringWithUTF8String:"_sel,
+                           ua.c_str()));
+  }
+
   void set_borderless() {
-      unsigned long windowStyleMask = ((unsigned long (*)(id, SEL))objc_msgSend)(
-        (id) m_window, "styleMask"_sel);
-    windowStyleMask &= ~webview::detail::NSWindowStyleMaskTitled;
-    ((void (*)(id, SEL, int))objc_msgSend)((id) m_window,
-            "setStyleMask:"_sel, windowStyleMask);
+      /*unsigned long windowStyleMask = ((unsigned long (*)(id, SEL))objc_msgSend)(
+        (id) m_window, "styleMask"_sel);*/
+     unsigned long windowStyleMask =  objc::msg_send<unsigned long>(m_window, "styleMask"_sel);
+     windowStyleMask &= ~webview::detail::NSWindowStyleMaskTitled;
+    /*((void (*)(id, SEL, int))objc_msgSend)((id) m_window,
+            "setStyleMask:"_sel, windowStyleMask);*/
+     objc::msg_send<void>(m_window, "setStyleMask:"_sel, windowStyleMask);
   }
 
   const char* get_title() {
-    const char* title = ((const char *(*)(id, SEL))objc_msgSend)(
+    /*const char* title = ((const char *(*)(id, SEL))objc_msgSend)(
         ((id(*)(id, SEL))objc_msgSend)(m_window, "title"_sel)
       , "UTF8String"_sel);
+    return title;*/
+   const char* title = objc::msg_send<const char *>(
+        objc::msg_send<id(*)>(m_window, "title"_sel), "UTF8String"_sel);
     return title;
   }
 
   bool is_maximized() {
-    return ((bool (*)(id, SEL, id))objc_msgSend)((id) m_window,
-        "isZoomed"_sel, NULL);
+    /*return ((bool (*)(id, SEL, id))objc_msgSend)((id) m_window,
+        "isZoomed"_sel, NULL);*/
+    return objc::msg_send<bool>(m_window, "isZoomed"_sel, NULL);
   }
 
   void maximize() {
-    ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
-        "zoom:"_sel, NULL);
+    /*((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
+        "zoom:"_sel, NULL);*/
+    objc::msg_send<void>(m_window, "zoom:"_sel, NULL);
   }
 
   void unmaximize() {
-    ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
-        "zoom:"_sel, NULL);
+    /*((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
+        "zoom:"_sel, NULL);*/
+    objc::msg_send<void>(m_window, "zoom:"_sel, NULL);
   }
 
   void minimize() {
-    ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
-        "miniaturize:"_sel, NULL);
+    /*((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
+        "miniaturize:"_sel, NULL);*/
+    objc::msg_send<void>(m_window, "miniaturize:"_sel, NULL);
   }
 
   void unminimize() {
-    ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
-        "deminiaturize:"_sel, NULL);
+    /*((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
+        "deminiaturize:"_sel, NULL);*/
+     objc::msg_send<void>(m_window, "deminiaturize:"_sel, NULL);
+     focus();
   }
 
   bool is_visible(){
-    return ((bool (*)(id, SEL, id))objc_msgSend)((id) m_window,
-        "isVisible"_sel, NULL);
+    /*return ((bool (*)(id, SEL, id))objc_msgSend)((id) m_window,
+        "isVisible"_sel, NULL);*/
+    return objc::msg_send<bool>(m_window, "isVisible"_sel, NULL);
   }
 
   void set_full_screen(){
-    ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
-            "toggleFullScreen:"_sel, NULL);
+    /*((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
+            "toggleFullScreen:"_sel, NULL);*/
+    objc::msg_send<void>(m_window, "toggleFullScreen:"_sel, NULL);
   }
 
   void exit_full_screen(){
-    ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
-            "toggleFullScreen:"_sel, NULL);
+    /*((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
+            "toggleFullScreen:"_sel, NULL);*/
+    objc::msg_send<void>(m_window, "toggleFullScreen:"_sel, NULL);
   }
 
   bool is_full_screen(){
-    unsigned long windowStyleMask = ((unsigned long (*)(id, SEL))objc_msgSend)(
-        (id) m_window, "styleMask"_sel);
+    /*unsigned long windowStyleMask = ((unsigned long (*)(id, SEL))objc_msgSend)(
+        (id) m_window, "styleMask"_sel);*/
+    unsigned long windowStyleMask = objc::msg_send<unsigned long>(m_window, "styleMask"_sel);
     return (windowStyleMask & NSWindowStyleMaskFullScreen) == NSWindowStyleMaskFullScreen;
   }
 
-
   void set_icon(const char *icon_data, long icon_size){
     id icon = nullptr;
-    icon = ((id (*)(id, SEL))objc_msgSend)("NSImage"_cls, "alloc"_sel);
+    //icon = ((id (*)(id, SEL))objc_msgSend)("NSImage"_cls, "alloc"_sel);*/
+    icon = objc::msg_send<id>("NSImage"_cls, "alloc"_sel);
 
-    id nsIconData = ((id (*)(id, SEL, const char*, int))objc_msgSend)("NSData"_cls,
-                "dataWithBytes:length:"_sel, icon_data, icon_size);
+    /*id nsIconData = ((id (*)(id, SEL, const char*, int))objc_msgSend)("NSData"_cls,
+                "dataWithBytes:length:"_sel, icon_data, icon_size);*/
+    id nsIconData = objc::msg_send<id>("NSData"_cls, "dataWithBytes:length:"_sel, icon_data, icon_size);
 
-    ((void (*)(id, SEL, id))objc_msgSend)(icon, "initWithData:"_sel, nsIconData);
-    ((void (*)(id, SEL, id))objc_msgSend)(((id (*)(id, SEL))objc_msgSend)("NSApplication"_cls,
-                                "sharedApplication"_sel), "setApplicationIconImage:"_sel, icon);
+    //((void (*)(id, SEL, id))objc_msgSend)(icon, "initWithData:"_sel, nsIconData);
+    objc::msg_send<void>(icon, "initWithData:"_sel, nsIconData);
+
+    /*((void (*)(id, SEL, id))objc_msgSend)(((id (*)(id, SEL))objc_msgSend)("NSApplication"_cls,
+                                "sharedApplication"_sel), "setApplicationIconImage:"_sel, icon);*/
+    objc::msg_send<void>(
+        objc::msg_send<id(*)>("NSApplication"_cls, "sharedApplication"_sel), "setApplicationIconImage:"_sel, icon);
   }
 
   void set_always_ontop(int on_top){
-      ((void (*)(id, SEL, int))objc_msgSend)((id) m_window,
-            "setLevel:"_sel, on_top ? NSFloatingWindowLevel : NSBaseWindowLevel);
+      /*((void (*)(id, SEL, int))objc_msgSend)((id) m_window,
+            "setLevel:"_sel, on_top ? NSFloatingWindowLevel : NSBaseWindowLevel);*/
+      objc::msg_send<void>(m_window, "setLevel:"_sel, on_top ? NSFloatingWindowLevel : NSBaseWindowLevel);
   }
 
   CGRect __getWindowRect() {
     // "frame"_sel is the easiest way, but it crashes
     // So, this is a workaround with low-level APIs.
-    long winId = ((long(*)(id, SEL))objc_msgSend)(m_window, "windowNumber"_sel);
+    //long winId = ((long(*)(id, SEL))objc_msgSend)(m_window, "windowNumber"_sel);
+    long winId = objc::msg_send<long>(m_window, "windowNumber"_sel);
     auto winInfoArray = CGWindowListCopyWindowInfo(kCGWindowListOptionIncludingWindow, winId);
     auto winInfo = CFArrayGetValueAtIndex(winInfoArray, 0);
     auto winBounds = CFDictionaryGetValue((CFDictionaryRef) winInfo, kCGWindowBounds);
@@ -1040,14 +1073,16 @@ public:
   void move(int x, int y){
     auto displayId = CGMainDisplayID();
     int height = CGDisplayPixelsHigh(displayId);
-    ((void (*)(id, SEL, CGPoint))objc_msgSend)(
+    /*((void (*)(id, SEL, CGPoint))objc_msgSend)(
         (id) m_window, "setFrameTopLeftPoint:"_sel,
-        CGPointMake(x, height - y));
+        CGPointMake(x, height - y));*/
+    objc::msg_send<void>(m_window, "setFrameTopLeftPoint:"_sel, CGPointMake(x, height - y));
   }
 
   void focus(){
-    ((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
-            "orderFront:"_sel, NULL);
+    /*((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
+            "orderFront:"_sel, NULL);*/
+    objc::msg_send<void>(m_window, "orderFront:"_sel, NULL);
   }
 
 
@@ -2570,6 +2605,10 @@ WEBVIEW_API void webview_hide(webview_t w) {
 
 WEBVIEW_API void webview_show(webview_t w) {
   static_cast<webview::webview *>(w)->show();
+}
+
+WEBVIEW_API void webview_set_user_agent(webview_t w, const char *ua) {
+  static_cast<webview::webview *>(w)->set_user_agent(ua);
 }
 
 WEBVIEW_API void webview_set_borderless(webview_t w) {

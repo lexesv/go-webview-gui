@@ -91,6 +91,9 @@ type WebView interface {
 	// thread.
 	SetTitle(title string)
 
+	// SetUserAgent sets a custom user agent string for the webview.
+	SetUserAgent(userAgent string)
+
 	// SetSize updates native window size. See Hint constants.
 	SetSize(w int, h int, hint Hint)
 
@@ -125,10 +128,10 @@ type WebView interface {
 	// f must return either value and error or just error
 	Bind(name string, f interface{}) error
 
-	// SetEventsHandler sets the event handling function
+	// SetWindowEventsHandler sets the event handling function
 	// Should be called before calling the "Run" method
 	// Example:
-	// w.SetEventsHandler(func(state webview.WindowState) {
+	// w.SetWindowEventsHandler(func(state webview.WindowState) {
 	//		switch state {
 	//		case webview.WindowClose:
 	//			w.Hide()
@@ -297,6 +300,12 @@ func (w *webview) SetTitle(title string) {
 	s := C.CString(title)
 	defer C.free(unsafe.Pointer(s))
 	C.webview_set_title(w.w, s)
+}
+
+func (w *webview) SetUserAgent(userAgent string) {
+	ua := C.CString(userAgent)
+	defer C.free(unsafe.Pointer(ua))
+	C.webview_set_user_agent(w.w, ua)
 }
 
 func (w *webview) SetSize(width int, height int, hint Hint) {
