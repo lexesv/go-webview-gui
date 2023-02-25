@@ -10,6 +10,7 @@ const html = `<button id="increment">Tap me</button>
 <br>
 <button id="openFileDialog">OpenFile</button>
 <div>Selected file: <span id="selectedFile"></span></div>
+<br>
 
 <script>
   const [incrementElement, countElement, openFileDialogElement, selectedFileElement] =
@@ -30,6 +31,12 @@ const html = `<button id="increment">Tap me</button>
     });
 
   });
+
+// confirm() & alert()
+window.confirm("Confirm?").then(result => {
+     alert(result);
+});
+
 </script>`
 
 type Result struct {

@@ -28,6 +28,7 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
+	"time"
 	"unsafe"
 )
 
@@ -109,7 +110,7 @@ type WebView interface {
 	SetHtml(html string)
 
 	// Init injects JavaScript code at the initialization of the new page. Every
-	// time the webview will open a the new page - this initialization code will
+	// time the webview will open a new page - this initialization code will
 	// be executed. It is guaranteed that code is executed before window.onload.
 	Init(js string)
 
@@ -210,11 +211,16 @@ type WebView interface {
 
 	// Focus set the focus on the native window.
 	Focus()
+
+	SetDraggable(id string)
+
+	UnSetDraggable(id string)
 }
 
 type webview struct {
-	w    C.webview_t
-	Hint Hint
+	w            C.webview_t
+	Hint         Hint
+	ContentState string
 }
 
 // EventHandler It is used to intercept changes in the status of the native window
@@ -257,6 +263,7 @@ func New(debug, exitOnClose bool) WebView {
 	w := &webview{w: res}
 	events.exitOnClose = exitOnClose
 	events.exitFunc = w.Terminate
+	w.initJSFunc()
 	return w
 }
 
@@ -445,6 +452,30 @@ func (w *webview) SetIconBites(b []byte, size int) {
 
 func (w *webview) SetAlwaysOnTop(onTop bool) {
 	C.webview_set_always_ontop(w.w, boolToInt(onTop))
+}
+
+func (w *webview) GetContentState() string {
+	return w.ContentState
+}
+
+func (w *webview) SetDraggable(id string) {
+	go func() {
+		for w.ContentState != "complete" {
+			time.Sleep(time.Millisecond * 150)
+		}
+		j := `setDraggableRegion('` + id + `');`
+		w.Eval(j)
+	}()
+}
+
+func (w *webview) UnSetDraggable(id string) {
+	go func() {
+		for w.ContentState != "complete" {
+			time.Sleep(time.Millisecond * 150)
+		}
+		j := `unsetDraggableRegion('` + id + `');`
+		w.Eval(j)
+	}()
 }
 
 func (w *webview) Dispatch(f func()) {
