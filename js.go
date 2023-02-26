@@ -20,6 +20,7 @@ func (w *webview) initJSFunc() {
 
 	w.Bind("contentState", func(s string) {
 		w.ContentState = s
+		events.handle_cs(s)
 	})
 }
 

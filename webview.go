@@ -212,6 +212,10 @@ type WebView interface {
 	// Focus set the focus on the native window.
 	Focus()
 
+	GetContentState() string
+
+	SetContentStateHandler(f func(state string))
+
 	SetDraggable(id string)
 
 	UnSetDraggable(id string)
@@ -226,6 +230,7 @@ type webview struct {
 // EventHandler It is used to intercept changes in the status of the native window
 type eventsHandler struct {
 	handle      func(state WindowState)
+	handle_cs   func(state string)
 	exitOnClose bool
 	exitFunc    func()
 }
@@ -456,6 +461,10 @@ func (w *webview) SetAlwaysOnTop(onTop bool) {
 
 func (w *webview) GetContentState() string {
 	return w.ContentState
+}
+
+func (w *webview) SetContentStateHandler(f func(state string)) {
+	events.handle_cs = f
 }
 
 func (w *webview) SetDraggable(id string) {
