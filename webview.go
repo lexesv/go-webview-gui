@@ -129,7 +129,7 @@ type WebView interface {
 	// f must return either value and error or just error
 	Bind(name string, f interface{}) error
 
-	// SetWindowEventsHandler sets the event handling function
+	// SetWindowEventsHandler sets the window status change event handling function
 	// Should be called before calling the "Run" method
 	// Example:
 	// w.SetWindowEventsHandler(func(state webview.WindowState) {
@@ -212,12 +212,27 @@ type WebView interface {
 	// Focus set the focus on the native window.
 	Focus()
 
+	// GetContentState gets the current status of the document
+	// uninitialized - Has not started loading
+	// loading - Is loading
+	// loaded - Has been loaded
+	// interactive - Has loaded enough to interact with
+	// complete - Fully loaded
 	GetContentState() string
 
+	// SetContentStateHandler sets the document status change event handling function
+	// Should be called before calling the "Run" method
+	// Example:
+	// w.SetContentStateHandler(func(state string) {
+	//		fmt.Printf("document content state: %s\n", state)
+	// })
 	SetContentStateHandler(f func(state string))
 
+	// SetDraggable converts a given DOM element to a draggable region. The user will be able to drag the native window by dragging the given DOM element.
+	// This feature is suitable to make custom window bars along with the borderless mode.
 	SetDraggable(id string)
 
+	// UnSetDraggable converts a draggable region to a normal DOM elements by removing drag event handlers.
 	UnSetDraggable(id string)
 }
 

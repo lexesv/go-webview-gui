@@ -57,7 +57,7 @@ func main() {
 	})
 
 	w.SetContentStateHandler(func(state string) {
-		fmt.Printf("DOM content state: %s\n", state)
+		fmt.Printf("document content state: %s\n", state)
 	})
 
 	systray.Register(onReady(w))
