@@ -1,30 +1,74 @@
 package webview
 
 import (
+	"embed"
+	_ "embed"
+	"strings"
+
 	"github.com/lexesv/go-webview-gui/dialog"
 )
 
-func (w *webview) initJSFunc() {
-	w.Init(js)
+//go:embed init.js
+var EF embed.FS
 
-	w.Bind("alert", func(s interface{}) {
-		dialog.Message("%v", s).Info()
+func (w *webview) initJSFunc() {
+
+	js, _ := EF.ReadFile("init.js")
+	w.Init(string(js))
+
+	w.Bind("_alert", func(s ...string) {
+		v := strings.Join(s, "")
+		dialog.Message("%s", v).Info()
 	})
+
 	w.Bind("confirm", func(s interface{}) bool {
 		yn := dialog.Message("%v", s).YesNo()
 		return yn
 	})
+
 	w.Bind("move", func(x, y int) {
 		w.Move(x, y)
 	})
 
+	w.Bind("getHtml", func(s string) {
+		w.Html = s
+	})
+
 	w.Bind("contentState", func(s string) {
 		w.ContentState = s
-		events.handle_cs(s)
+		if events.handle_cs != nil {
+			events.handle_cs(s)
+		}
 	})
+
+	type DResult struct {
+		Id string `json:"id,omitempty"`
+		V  bool   `json:"v,omitempty"`
+	}
+	w.Bind("getDraggebleData", func() (res []DResult) {
+		w.DraggableElements.Range(func(key, value any) bool {
+			r := DResult{Id: key.(string), V: value.(bool)}
+			res = append(res, r)
+			return true
+		})
+		return res
+	})
+	w.Bind("delDraggebleElement", func(id string) {
+		w.DraggableElements.Delete(id)
+	})
+
+	w.Bind("getDraggebleElementValue", func(id string) bool {
+		if v, ok := w.DraggableElements.Load(id); !ok {
+			return false
+		} else {
+			return v.(bool)
+		}
+
+	})
+
 }
 
-var js = `
+/*var js = `
 'use strict';
 
 document.onreadystatechange = function () {
@@ -96,4 +140,4 @@ function unsetDraggableRegion(domElementOrId) {
         resolve();
     });
 }
-`
+`*/

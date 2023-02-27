@@ -2,29 +2,51 @@ package main
 
 import "C"
 import (
+	"embed"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"syscall"
-	"time"
 
+	"github.com/kardianos/osext"
 	"github.com/lexesv/go-webview-gui"
 	"github.com/lexesv/go-webview-gui/dialog"
 	"github.com/lexesv/go-webview-gui/systray"
 )
 
+//go:embed icon.png
+var EF embed.FS
+
+type App_ struct {
+	Path, File, FileName string
+}
+
 var (
 	iconData []byte
-	html     = `<div style="width:97%; height: 20px; border: 1px solid blue; padding: 5px; text-align: center;" id="drg">Drag me</div>
-<br><br>Thanks for using Golang Webview GUI!`
+	App      = &App_{}
+	html     = `Thanks for using Golang Webview GUI!`
 )
+
+func init() {
+	var err error
+	if App.Path, err = osext.ExecutableFolder(); err != nil {
+		log.Fatal(err)
+	}
+	if App.File, err = osext.Executable(); err != nil {
+		log.Fatal(err)
+	} else {
+		App.FileName = filepath.Base(App.File)
+	}
+}
 
 func main() {
 	var err error
 
-	iconData, err = os.ReadFile("../asset/icon.png")
+	iconData, err = EF.ReadFile("icon.png")
 	if err != nil {
 		panic(err)
 	}
@@ -65,6 +87,7 @@ func main() {
 	w.SetIconBites(iconData, len(iconData))
 	w.SetSize(480, 320, webview.HintNone)
 	w.SetHtml(html)
+	//w.Navigate("https://google.com")
 	w.Run()
 }
 
@@ -113,6 +136,7 @@ func onReady(w webview.WebView) func() {
 			mSetUserAgent := systray.AddMenuItem("SetUserAgent", "")
 			mSetDraggable := systray.AddMenuItem("SetDraggable", "")
 			mUnSetDraggable := systray.AddMenuItem("UnSetDraggable", "")
+			mGetHtml := systray.AddMenuItem("GetHtml", "")
 			systray.AddSeparator()
 			mNewWindow := systray.AddMenuItem("New Window", "")
 			systray.AddSeparator()
@@ -137,17 +161,14 @@ func onReady(w webview.WebView) func() {
 					w.Dispatch(func() {
 						w.Show()
 					})
-
 				case <-mFocus.ClickedCh:
 					w.Dispatch(func() {
 						w.Focus()
 					})
-
 				case <-mMove.ClickedCh:
 					w.Dispatch(func() {
 						w.Move(100, 100)
 					})
-
 				case <-mMaximize.ClickedCh:
 					w.Dispatch(func() {
 						w.Maximize()
@@ -195,37 +216,29 @@ func onReady(w webview.WebView) func() {
 					})
 				case <-mSetDraggable.ClickedCh:
 					w.Dispatch(func() {
-						w.SetHtml(html)
-						w.SetBorderless()
-						time.Sleep(time.Second)
 						w.SetDraggable("drg")
+						w.SetHtml(`<div style="width:97%; height: 20px; border: 1px solid blue;padding: 5px; text-align: center;" id="drg">Drag me</div>`)
+						w.SetBorderless()
 					})
 				case <-mUnSetDraggable.ClickedCh:
 					w.Dispatch(func() {
-						w.SetHtml(html)
-						w.SetBordered()
 						w.UnSetDraggable("drg")
+						//w.SetHtml(html)
+						//w.SetBordered()
 					})
+				case <-mGetHtml.ClickedCh:
+					dialog.Message("%s", w.GetHtml()).Info()
+
 				case <-mNewWindow.ClickedCh:
-					path, err := os.Executable()
-					if err != nil {
-						dialog.Message("%s", err.Error()).Error()
-						break
-					}
-					dir, err := os.Getwd()
-					if err != nil {
-						dialog.Message("%s", err.Error()).Error()
-						break
-					}
 					p := []string{
 						"-new_window",
 						"-title", "About",
 						"-width", "300",
 						"-height", "200",
 						"-hint", "fixed",
-						"-url", "file://" + dir + "/about.html",
+						"-url", "file://" + App.Path + "/../asset/about.html",
 					}
-					cmd := exec.Command(path, p...)
+					cmd := exec.Command(App.File, p...)
 					//fmt.Println(cmd.Args)
 					c := make(chan os.Signal, 2)
 					signal.Notify(c, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT)

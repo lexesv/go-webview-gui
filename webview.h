@@ -140,9 +140,10 @@ WEBVIEW_API void webview_set_title(webview_t w, const char *title);
 #define WEBVIEW_WINDOW_CLOSE 0
 #define WEBVIEW_WINDOW_FOCUS 1
 #define WEBVIEW_WINDOW_BLUR 2
-#define WEBVIEW_WINDOW_FULLSCREEN 3 // GTK only
-#define WEBVIEW_WINDOW_MOVE 4
-#define WEBVIEW_WINDOW_RESIZE 5
+#define WEBVIEW_WINDOW_FULLSCREEN 3
+#define WEBVIEW_WINDOW_EXITFULLSCREEN 4
+#define WEBVIEW_WINDOW_MOVE 5
+#define WEBVIEW_WINDOW_RESIZE 6
 #define WEBVIEW_WINDOW_UNDEFINED 100 // GTK only
 
 // Updates native window size. See WEBVIEW_HINT constants.
@@ -835,15 +836,7 @@ public:
     auto app = get_shared_application();
     objc::msg_send<void>(app, "run"_sel);
   }
-  /*void run() {
-    id app = ((id(*)(id, SEL))objc_msgSend)("NSApplication"_cls,
-                                            "sharedApplication"_sel);
-    dispatch([&]() {
-      ((void (*)(id, SEL, BOOL))objc_msgSend)(
-          app, "activateIgnoringOtherApps:"_sel, 1);
-    });
-    ((void (*)(id, SEL))objc_msgSend)(app, "run"_sel);
-  }*/
+
   void dispatch(std::function<void()> f) {
     dispatch_async_f(dispatch_get_main_queue(), new dispatch_fn_t(f),
                      (dispatch_function_t)([](void *arg) {
@@ -852,12 +845,14 @@ public:
                        delete f;
                      }));
   }
+
   void set_title(const std::string &title) {
     objc::msg_send<void>(m_window, "setTitle:"_sel,
                          objc::msg_send<id>("NSString"_cls,
                                             "stringWithUTF8String:"_sel,
                                             title.c_str()));
   }
+
   void set_size(int width, int height, int hints) {
     auto style = static_cast<NSWindowStyleMask>(
         NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
@@ -1264,6 +1259,16 @@ private:
                     (IMP)(+[](id, SEL, id) {
                         if(windowStateChange)
                           windowStateChange(WEBVIEW_WINDOW_RESIZE);
+                    }), "c@:@");
+    class_addMethod(wcls, "windowDidEnterFullScreen:"_sel,
+                    (IMP)(+[](id, SEL, id) {
+                        if(windowStateChange)
+                          windowStateChange(WEBVIEW_WINDOW_FULLSCREEN);
+                    }), "c@:@");
+    class_addMethod(wcls, "windowDidExitFullScreen:"_sel,
+                    (IMP)(+[](id, SEL, id) {
+                        if(windowStateChange)
+                          windowStateChange(WEBVIEW_WINDOW_EXITFULLSCREEN);
                     }), "c@:@");
 
     objc_registerClassPair(wcls);

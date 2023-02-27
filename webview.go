@@ -56,13 +56,14 @@ const (
 	// Width and height are maximum bounds
 	HintMax = C.WEBVIEW_HINT_MAX
 
-	WindowClose      = C.WEBVIEW_WINDOW_CLOSE      // 0
-	WindowFocus      = C.WEBVIEW_WINDOW_FOCUS      // 1
-	WindowBlur       = C.WEBVIEW_WINDOW_BLUR       // 2
-	WindowMove       = C.WEBVIEW_WINDOW_MOVE       // 4
-	WindowResize     = C.WEBVIEW_WINDOW_RESIZE     // 5
-	WindowFullScreen = C.WEBVIEW_WINDOW_FULLSCREEN // 3   // GTK only
-	WindowUndefined  = C.WEBVIEW_WINDOW_UNDEFINED  // 100 // GTK only
+	WindowClose          = C.WEBVIEW_WINDOW_CLOSE          // 0
+	WindowFocus          = C.WEBVIEW_WINDOW_FOCUS          // 1
+	WindowBlur           = C.WEBVIEW_WINDOW_BLUR           // 2
+	WindowFullScreen     = C.WEBVIEW_WINDOW_FULLSCREEN     // 3
+	WindowExitFullScreen = C.WEBVIEW_WINDOW_EXITFULLSCREEN // 4
+	WindowMove           = C.WEBVIEW_WINDOW_MOVE           // 5
+	WindowResize         = C.WEBVIEW_WINDOW_RESIZE         // 6
+	WindowUndefined      = C.WEBVIEW_WINDOW_UNDEFINED      // 100 // GTK only
 )
 
 type WebView interface {
@@ -234,12 +235,16 @@ type WebView interface {
 
 	// UnSetDraggable converts a draggable region to a normal DOM elements by removing drag event handlers.
 	UnSetDraggable(id string)
+
+	GetHtml() (s string)
 }
 
 type webview struct {
-	w            C.webview_t
-	Hint         Hint
-	ContentState string
+	w                 C.webview_t
+	Hint              Hint
+	Html              string
+	ContentState      string
+	DraggableElements sync.Map
 }
 
 // EventHandler It is used to intercept changes in the status of the native window
@@ -267,7 +272,9 @@ func boolToInt(b bool) C.int {
 
 //export event_handler
 func event_handler(state C.int) {
-	events.handle(WindowState(state))
+	if events.handle != nil {
+		events.handle(WindowState(state))
+	}
 	if state == WindowClose && events.exitOnClose {
 		events.exitFunc()
 	}
@@ -292,9 +299,6 @@ func (w *webview) Destroy() {
 }
 
 func (w *webview) Run() {
-	if events.handle == nil {
-		w.SetWindowEventsHandler(func(state WindowState) {})
-	}
 	C.webview_set_event_handler(C.closure(C.event_handler))
 	C.webview_run(w.w)
 }
@@ -482,24 +486,19 @@ func (w *webview) SetContentStateHandler(f func(state string)) {
 	events.handle_cs = f
 }
 
+func (w *webview) GetHtml() (s string) {
+	for w.GetContentState() != "complete" {
+		time.Sleep(time.Millisecond * 150)
+	}
+	return w.Html
+}
+
 func (w *webview) SetDraggable(id string) {
-	go func() {
-		for w.ContentState != "complete" {
-			time.Sleep(time.Millisecond * 150)
-		}
-		j := `setDraggableRegion('` + id + `');`
-		w.Eval(j)
-	}()
+	w.DraggableElements.Store(id, true)
 }
 
 func (w *webview) UnSetDraggable(id string) {
-	go func() {
-		for w.ContentState != "complete" {
-			time.Sleep(time.Millisecond * 150)
-		}
-		j := `unsetDraggableRegion('` + id + `');`
-		w.Eval(j)
-	}()
+	w.DraggableElements.Store(id, false)
 }
 
 func (w *webview) Dispatch(f func()) {
