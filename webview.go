@@ -237,12 +237,16 @@ type WebView interface {
 	UnSetDraggable(id string)
 
 	GetHtml() (s string)
+
+	GetUrl() string
+
+	GetPageTitle() string
 }
 
 type webview struct {
 	w                 C.webview_t
 	Hint              Hint
-	Html              string
+	Html, Url, PTitle string
 	ContentState      string
 	DraggableElements sync.Map
 }
@@ -486,11 +490,19 @@ func (w *webview) SetContentStateHandler(f func(state string)) {
 	events.handle_cs = f
 }
 
-func (w *webview) GetHtml() (s string) {
+func (w *webview) GetHtml() string {
 	for w.GetContentState() != "complete" {
 		time.Sleep(time.Millisecond * 150)
 	}
 	return w.Html
+}
+
+func (w *webview) GetPageTitle() string {
+	return w.PTitle
+}
+
+func (w *webview) GetUrl() string {
+	return w.Url
 }
 
 func (w *webview) SetDraggable(id string) {

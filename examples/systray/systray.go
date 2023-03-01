@@ -11,11 +11,12 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/kardianos/osext"
 	"github.com/lexesv/go-webview-gui"
-	"github.com/lexesv/go-webview-gui/dialog"
 	"github.com/lexesv/go-webview-gui/systray"
+	"github.com/ncruces/zenity"
 )
 
 //go:embed icon.png
@@ -137,6 +138,8 @@ func onReady(w webview.WebView) func() {
 			mSetDraggable := systray.AddMenuItem("SetDraggable", "")
 			mUnSetDraggable := systray.AddMenuItem("UnSetDraggable", "")
 			mGetHtml := systray.AddMenuItem("GetHtml", "")
+			mGetUrl := systray.AddMenuItem("GetUrl", "")
+			mGetPageTitle := systray.AddMenuItem("GetPageTitle", "")
 			systray.AddSeparator()
 			mNewWindow := systray.AddMenuItem("New Window", "")
 			systray.AddSeparator()
@@ -148,11 +151,11 @@ func onReady(w webview.WebView) func() {
 					syscall.Kill(syscall.Getpid(), syscall.SIGINT) // kill child window/s
 					w.Terminate()
 				case <-mShowTitle.ClickedCh:
-					dialog.Message("%s", w.GetTitle()).Info()
+					zenity.Info(w.GetTitle(), zenity.Title("Info"), zenity.NoIcon)
 				case <-mGetSizePosition.ClickedCh:
 					width, height, hint := w.GetSize()
 					x, y := w.GetPosition()
-					dialog.Message("Size:%dx%d %v. \nPosition: X:%d Y:%d", width, height, hint, x, y).Info()
+					zenity.Info(fmt.Sprintf("Size:%dx%d %v. \nPosition: X:%d Y:%d", width, height, hint, x, y), zenity.Title("Info"), zenity.NoIcon)
 				case <-mHide.ClickedCh:
 					w.Dispatch(func() {
 						w.Hide()
@@ -223,11 +226,21 @@ func onReady(w webview.WebView) func() {
 				case <-mUnSetDraggable.ClickedCh:
 					w.Dispatch(func() {
 						w.UnSetDraggable("drg")
-						//w.SetHtml(html)
-						//w.SetBordered()
+						w.SetHtml(html)
+						w.SetBordered()
 					})
 				case <-mGetHtml.ClickedCh:
-					dialog.Message("%s", w.GetHtml()).Info()
+					zenity.Info(w.GetHtml(), zenity.Title("Info"), zenity.NoIcon)
+
+				case <-mGetUrl.ClickedCh:
+					zenity.Info(w.GetUrl(), zenity.Title("Info"), zenity.NoIcon)
+
+				case <-mGetPageTitle.ClickedCh:
+					w.Navigate("https://golang.org")
+					for w.GetContentState() == "complete" {
+						time.Sleep(time.Millisecond * 250)
+					}
+					zenity.Info(w.GetPageTitle(), zenity.Title("Info"), zenity.NoIcon)
 
 				case <-mNewWindow.ClickedCh:
 					p := []string{
@@ -248,7 +261,7 @@ func onReady(w webview.WebView) func() {
 						os.Exit(1)
 					}()
 					if err := cmd.Start(); err != nil {
-						dialog.Message("%s", err.Error()).Error()
+						zenity.Error(err.Error(), zenity.Title("Error"), zenity.ErrorIcon)
 					}
 
 				}

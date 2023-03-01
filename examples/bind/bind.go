@@ -31,12 +31,6 @@ const html = `<button id="increment">Tap me</button>
     });
 
   });
-
-// confirm() & alert()
-/*window.confirm("Confirm?").then(result => {
-	alert(result);
-});*/
-alert();
 </script>`
 
 type Result struct {

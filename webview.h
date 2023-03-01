@@ -925,7 +925,6 @@ public:
   }
 
   void set_user_agent(const std::string &ua) {
-    //objc::msg_send<void>(m_window, "customUserAgent:"_sel, ua);
     objc::msg_send<void>(m_webview, "setCustomUserAgent:"_sel,
                          objc::msg_send<id>("NSString"_cls, "stringWithUTF8String:"_sel,
                            ua.c_str()));

@@ -3,7 +3,12 @@ document.onreadystatechange = function () {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    window.getHtml(document.getElementsByTagName('html')[0].innerHTML);
+    window.getHtml(window.document.getElementsByTagName('html')[0].innerHTML);
+    window.getUrl(window.location.href);
+    window.getPageTitle(window.document.title);
+
+    Array.from(document.querySelectorAll('a[target="_blank"]'))
+        .forEach(link => link.removeAttribute('target'));
 
     window.getDraggebleData().then(result => {
         if (result == null) return
@@ -29,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     }
                 });
-            },250);
+            }, 250);
 
             /*function DraggableListener(event) {
                 window.getDraggebleElementValue(e.id).then(result => {
@@ -45,17 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             el.addEventListener("mouseover", DraggableListener);*/
-
         });
     });
 
 });
-
-
-function alert(v) {
-    window._alert(v);
-}
-
 
 function __awaiter(thisArg, _arguments, P, generator) {
     function adopt(value) {
@@ -98,11 +96,9 @@ function setDraggableRegion(domElementOrId) {
         let initialClientX = 0;
         let initialClientY = 0;
         if (!draggableRegion) {
-            //alert("Unable to find DOM element");
             return reject('Unable to find DOM element');
         }
         if (draggableRegions.has(draggableRegion)) {
-            //alert("This DOM element is already an active draggable region");
             return reject('This DOM element is already an active draggable region');
         }
         draggableRegion.addEventListener('pointerdown', startPointerCapturing);
@@ -130,7 +126,6 @@ function setDraggableRegion(domElementOrId) {
             draggableRegion.releasePointerCapture(evt.pointerId);
         }
 
-        //alert('Draggable region was activated');
         resolve('Draggable region was activated');
     });
 }
