@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/lexesv/go-webview-gui"
-	"github.com/lexesv/go-webview-gui/dialog"
+	"github.com/ncruces/zenity"
 )
 
 func main() {
@@ -26,6 +26,6 @@ func main() {
 
 func EventHandler(state webview.WindowState) {
 	if state == webview.WindowClose {
-		dialog.Message("%s", "Window Closed").Title("Info").Info()
+		zenity.Info("Window Closed", zenity.NoIcon)
 	}
 }

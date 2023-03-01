@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/lexesv/go-webview-gui"
-	"github.com/lexesv/go-webview-gui/dialog"
+	"github.com/ncruces/zenity"
 )
 
 const html = `<button id="increment">Tap me</button>
@@ -50,9 +50,13 @@ func main() {
 		return Result{Count: count}
 	})
 	w.Bind("openFileDialog", func() Result {
-		file, err := dialog.File().Title("Select file").Filter("Text files", "txt", "docx").Load()
+		file, err := zenity.SelectFile(zenity.FileFilters{
+			{"Go files", []string{"*.go"}, false},
+			{"Web files", []string{"*.html", "*.js", "*.css"}, true},
+			{"Image files", []string{"*.png", "*.gif", "*.ico", "*.jpg", "*.webp"}, true},
+		})
 		if err != nil {
-			dialog.Message("%s", err.Error()).Error()
+			zenity.Error(err.Error())
 		}
 		return Result{File: file}
 	})

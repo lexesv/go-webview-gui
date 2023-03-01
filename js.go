@@ -53,6 +53,7 @@ func (w *webview) initJSFunc() {
 		Id string `json:"id,omitempty"`
 		V  bool   `json:"v,omitempty"`
 	}
+
 	w.Bind("getDraggebleData", func() (res []DResult) {
 		w.DraggableElements.Range(func(key, value any) bool {
 			r := DResult{Id: key.(string), V: value.(bool)}
@@ -61,6 +62,7 @@ func (w *webview) initJSFunc() {
 		})
 		return res
 	})
+
 	w.Bind("delDraggebleElement", func(id string) {
 		w.DraggableElements.Delete(id)
 	})
