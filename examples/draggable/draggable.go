@@ -39,7 +39,7 @@ func main() {
 	w.SetBorderless()
 	w.SetDraggable("drg")
 	go func() {
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 20)
 		w.UnSetDraggable("drg")
 	}()
 	w.Run()

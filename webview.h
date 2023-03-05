@@ -144,7 +144,6 @@ WEBVIEW_API void webview_set_title(webview_t w, const char *title);
 #define WEBVIEW_WINDOW_EXITFULLSCREEN 4
 #define WEBVIEW_WINDOW_MOVE 5
 #define WEBVIEW_WINDOW_RESIZE 6
-#define WEBVIEW_WINDOW_UNDEFINED 100 // GTK only
 
 // Updates native window size. See WEBVIEW_HINT constants.
 WEBVIEW_API void webview_set_size(webview_t w, int width, int height,
@@ -181,6 +180,8 @@ WEBVIEW_API void webview_set_user_agent(webview_t w, const char *ua);
 
 WEBVIEW_API void webview_set_borderless(webview_t w);
 
+WEBVIEW_API void webview_set_bordered(webview_t w, int hints);
+
 WEBVIEW_API const char *webview_get_title(webview_t w);
 
 WEBVIEW_API int webview_is_maximized(webview_t w);
@@ -207,13 +208,9 @@ WEBVIEW_API void webview_set_icon(webview_t w, const char *icon_data, long icon_
 
 WEBVIEW_API void webview_set_always_ontop(webview_t w, int on_top);
 
-WEBVIEW_API int webview_get_width(webview_t w);
+WEBVIEW_API void webview_get_size(webview_t w, int* width, int* height);
 
-WEBVIEW_API int webview_get_height(webview_t w);
-
-WEBVIEW_API int webview_get_position_x(webview_t w);
-
-WEBVIEW_API int webview_get_position_y(webview_t w);
+WEBVIEW_API void webview_get_position(webview_t w, int* x, int* y);
 
 WEBVIEW_API void webview_move(webview_t w, int x, int y);
 
@@ -593,6 +590,7 @@ public:
       return;
     }
     m_window = static_cast<GtkWidget *>(window);
+    bool isGtkWindowFullScreen = false;
     if (m_window == nullptr) {
       m_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     }
@@ -614,6 +612,49 @@ public:
                        g_free(s);
                      }),
                      this);
+
+    g_signal_connect(G_OBJECT(m_window), "window-state-event",
+        G_CALLBACK(+[](GtkWidget *widget, GdkEventWindowState *event, gpointer user_data) {
+            if(!windowStateChange) return;
+            if(event->changed_mask & GDK_WINDOW_STATE_FULLSCREEN){
+                if(event->new_window_state & WEBVIEW_WINDOW_FULLSCREEN){
+                   isGtkWindowFullScreen = true;
+                   windowStateChange(WEBVIEW_WINDOW_FULLSCREEN);
+                }
+                else {
+                   isGtkWindowFullScreen = false;
+                   windowStateChange(WEBVIEW_WINDOW_EXITFULLSCREEN);
+                }
+            }
+            else if(event->changed_mask & GDK_WINDOW_STATE_FOCUSED) {
+                if(event->new_window_state & GDK_WINDOW_STATE_FOCUSED){
+                   windowStateChange(WEBVIEW_WINDOW_FOCUS);
+                }
+                else {
+                    windowStateChange(WEBVIEW_WINDOW_BLUR);
+                }
+            }
+        }),
+    nullptr);
+
+    g_signal_connect(G_OBJECT(m_window), "delete-event",
+            G_CALLBACK(+[](GtkWidget *widget, GdkEventWindowState *event, gpointer user_data) {
+                if(windowStateChange)
+                  windowStateChange(WEBVIEW_WINDOW_CLOSE);
+                return true;
+            }), nullptr);
+
+    // check-resize
+    g_signal_connect(G_OBJECT(m_window), "size-allocate",
+            G_CALLBACK(+[](GtkWidget *widget, GdkEventWindowState *event, gpointer user_data) {
+                windowStateChange(WEBVIEW_WINDOW_RESIZE);
+            }), nullptr);
+
+    g_signal_connect(G_OBJECT(m_window), "configure-event",
+             G_CALLBACK(+[](GtkWidget *widget, GdkEventWindowState *event, gpointer user_data) {
+                 windowStateChange(WEBVIEW_WINDOW_MOVE);
+             }), nullptr);
+
     webkit_user_content_manager_register_script_message_handler(manager,
                                                                 "external");
     init("window.external={invoke:function(s){window.webkit.messageHandlers."
@@ -690,18 +731,99 @@ public:
     webkit_web_view_run_javascript(WEBKIT_WEB_VIEW(m_webview), js.c_str(),
                                    nullptr, nullptr, nullptr);
   }
+
   void hide() {
-      gtk_widget_hide(m_webview);
+    gtk_widget_hide(m_webview);
   }
+
   void show() {
-      gtk_widget_show(m_webview);
+    gtk_widget_show(m_webview);
   }
+
+  void set_user_agent(const std::string &ua) {
+    WebKitSettings *settings = webkit_web_view_get_settings(WEBKIT_WEB_VIEW(m_webview));
+    webkit_settings_set_user_agent (settings, ua.c_str())
+  }
+
+  void set_bordered(int hints) {
+    gtk_window_set_decorated(GTK_WINDOW(m_webview), true);
+  }
+
   void set_borderless {
-      gtk_window_set_decorated(GTK_WINDOW(m_webview), false);
+    gtk_window_set_decorated(GTK_WINDOW(m_webview), false);
   }
+
   const char* get_title() {
-    const char*  title=gtk_window_get_title(GTK_WINDOW(m_window));
+    const char* title = gtk_window_get_title(GTK_WINDOW(m_window));
     return title;
+  }
+
+  bool is_maximized() {
+    return gtk_window_is_maximized(GTK_WINDOW(m_window)) == 1;
+  }
+
+  void maximize() {
+    gtk_window_maximize(GTK_WINDOW(m_window));
+  }
+
+  void unmaximize() {
+    gtk_window_unmaximize(GTK_WINDOW(m_window));
+  }
+
+  void minimize() {
+    gtk_window_iconify(GTK_WINDOW(m_window));
+  }
+
+  void unminimize() {
+    gtk_window_deiconify(GTK_WINDOW(m_window));
+  }
+
+  bool is_visible(){
+    return gtk_widget_is_visible(m_window) == 1;
+  }
+
+  void set_full_screen(){
+    gtk_window_fullscreen(GTK_WINDOW(m_window));
+  }
+
+  void exit_full_screen(){
+    gtk_window_unfullscreen(GTK_WINDOW(m_window));
+  }
+
+  bool is_full_screen(){
+    return isGtkWindowFullScreen;
+  }
+
+  void set_icon(const char *icon_data, long icon_size){
+    GdkPixbuf *icon = nullptr;
+    GdkPixbufLoader *loader;
+    GdkPixbuf *pixbuf;
+    loader = gdk_pixbuf_loader_new();
+
+    unsigned char *uicon_data = reinterpret_cast <unsigned char *> (const_cast <char *> (icon_data));
+    gdk_pixbuf_loader_write(loader, uicon_data, icon_size, NULL);
+    icon = gdk_pixbuf_loader_get_pixbuf(loader);
+    gtk_window_set_icon(GTK_WINDOW(m_window), (GdkPixbuf*)icon);
+  }
+
+  void set_always_ontop(int on_top){
+      gtk_window_set_keep_above(GTK_WINDOW(m_window), on_top)
+  }
+
+  void get_size(int* width, int* height){
+      gtk_window_get_size(GTK_WINDOW(m_window), &width, &height);
+  }
+
+  void get_position(int* x, int* y){
+    gdk_window_get_root_origin(gtk_widget_get_window(m_window), &x, &y);
+  }
+
+  void move(int x, int y){
+    gtk_window_move(GTK_WINDOW(m_window), x, y);
+  }
+
+  void focus(){
+    gtk_window_present(GTK_WINDOW(m_window));
   }
 
 
@@ -777,6 +899,7 @@ Result msg_send(Args... args) noexcept {
 enum NSBackingStoreType : NSUInteger { NSBackingStoreBuffered = 2 };
 
 enum NSWindowStyleMask : NSUInteger {
+  NSWindowStyleMaskBorderless = 0,
   NSWindowStyleMaskTitled = 1,
   NSWindowStyleMaskClosable = 2,
   NSWindowStyleMaskMiniaturizable = 4,
@@ -931,14 +1054,18 @@ public:
   }
 
   void set_borderless() {
-      /*unsigned long windowStyleMask = ((unsigned long (*)(id, SEL))objc_msgSend)(
-        (id) m_window, "styleMask"_sel);*/
-     unsigned long windowStyleMask =  objc::msg_send<unsigned long>(m_window, "styleMask"_sel);
-     windowStyleMask &= ~webview::detail::NSWindowStyleMaskTitled;
-    /*((void (*)(id, SEL, int))objc_msgSend)((id) m_window,
-            "setStyleMask:"_sel, windowStyleMask);*/
-     objc::msg_send<void>(m_window, "setStyleMask:"_sel, windowStyleMask);
+     objc::msg_send<void>(m_window, "setStyleMask:"_sel, NSWindowStyleMaskBorderless);
   }
+
+  void set_bordered(int hints) {
+       auto style = static_cast<NSWindowStyleMask>(
+               NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
+               NSWindowStyleMaskMiniaturizable);
+       if (hints != WEBVIEW_HINT_FIXED) {
+           style = static_cast<NSWindowStyleMask>(style | NSWindowStyleMaskResizable);
+       }
+       objc::msg_send<void>(m_window, "setStyleMask:"_sel, style);
+    }
 
   const char* get_title() {
     /*const char* title = ((const char *(*)(id, SEL))objc_msgSend)(
@@ -1044,24 +1171,16 @@ public:
     return winPos;
  }
 
-  int get_width(){
+  void get_size(int* width, int* height){
     CGRect winPos = __getWindowRect();
-    return winPos.size.width;
+    *width = int(winPos.size.width);
+    *height = int(winPos.size.height);
   }
 
-  int get_height(){
+  void get_position(int* x, int* y){
     CGRect winPos = __getWindowRect();
-    return winPos.size.height;
-  }
-
-  int get_position_x(){
-    CGRect winPos = __getWindowRect();
-    return winPos.origin.x;
-  }
-
-  int get_position_y(){
-    CGRect winPos = __getWindowRect();
-    return winPos.origin.y;
+    *x = winPos.origin.x;
+    *y = winPos.origin.y;
   }
 
   void move(int x, int y){
@@ -2161,6 +2280,11 @@ public:
       wc.hInstance = hInstance;
       wc.lpszClassName = L"webview";
       wc.hIcon = icon;
+      /*
+      WEBVIEW_WINDOW_FULLSCREEN
+      WEBVIEW_WINDOW_EXITFULLSCREEN
+      */
+      bool isWinWindowFullScreen = false;
       wc.lpfnWndProc =
           (WNDPROC)(+[](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> LRESULT {
             auto w = (win32_edge_engine *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
@@ -2169,7 +2293,23 @@ public:
               w->resize(hwnd);
               break;
             case WM_CLOSE:
-              DestroyWindow(hwnd);
+              //DestroyWindow(hwnd);
+              if(windowStateChange){
+                windowStateChange(WEBVIEW_WINDOW_CLOSE);
+              }
+              break;
+            case WM_ACTIVATE:
+              if(!windowStateChange) break;
+              if(LOWORD(wp) == WA_INACTIVE)
+                windowStateChange(WEBVIEW_WINDOW_BLUR);
+              else
+                windowStateChange(WEBVIEW_WINDOW_FOCUS);
+              break;
+            case WM_MOVE:
+                windowStateChange(WEBVIEW_WINDOW_MOVE);
+              break;
+            case WM_SIZE:
+                windowStateChange(WEBVIEW_WINDOW_RESIZE);
               break;
             case WM_DESTROY:
               w->terminate();
@@ -2312,25 +2452,157 @@ public:
   }
 
   void hide() {
-      ShowWindow(m_webview, SW_HIDE);
+    ShowWindow(m_window, SW_HIDE);
   }
+
   void show() {
-      ShowWindow(m_webview, SW_SHOW);
+    ShowWindow(m_window, SW_SHOW);
   }
-  void set_borderless() {
-      DWORD currentStyle = GetWindowLong(m_webview, GWL_STYLE);
-      currentStyle &= ~(WS_CAPTION | WS_THICKFRAME);
-      SetWindowLong(m_webview, GWL_STYLE, currentStyle);
-      SetWindowPos(m_webview, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE |
+
+  void set_user_agent(const std::string &ua) {
+    m_webview->Settings->UserAgent = ua;
+    ICoreWebView2Settings *settings = nullptr;
+    auto res = m_webview->get_Settings(&settings);
+    if (res != S_OK) {
+       return;
+    }
+    settings->put_UserAgent(ua);
+  }
+
+  void set_bordered(int hints) {
+    auto style = GetWindowLong(m_window, GWL_STYLE);
+    if (hints == WEBVIEW_HINT_FIXED) {
+      style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
+    } else {
+      style |= (WS_THICKFRAME | WS_MAXIMIZEBOX);
+    }
+    SetWindowLong(m_window, GWL_STYLE, style);
+  }
+
+  void set_borderless {
+    DWORD currentStyle = GetWindowLong(m_window, GWL_STYLE);
+    currentStyle &= ~(WS_CAPTION | WS_THICKFRAME);
+    SetWindowLong(m_window, GWL_STYLE, currentStyle);
+    SetWindowPos(m_window, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE |
                     SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
   }
 
   const char* get_title() {
     int len = GetWindowTextLength(hwnd);
     const char* title;
-    //title.reserve(len + 1);
-    GetWindowText(hwnd, const_cast<char*>(title), len);
+    GetWindowText(hwnd, title, len);
     return title;
+  }
+
+  bool is_maximized() {
+    return  IsZoomed(m_window) == 1;
+  }
+
+  void maximize() {
+    ShowWindow(m_window, SW_MAXIMIZE);
+  }
+
+  void unmaximize() {
+    ShowWindow(m_window, SW_RESTORE);
+  }
+
+  void minimize() {
+    ShowWindow(m_window, SW_MINIMIZE);
+  }
+
+  void unminimize() {
+    ShowWindow(m_window, SW_RESTORE);
+  }
+
+  bool is_visible(){
+    return IsWindowVisible(m_window) == 1;
+  }
+
+  void set_full_screen(){
+    savedStyle = GetWindowLong(m_window, GWL_STYLE);
+    savedStyleX = GetWindowLong(m_window, GWL_EXSTYLE);
+    GetWindowRect(m_window, &savedRect);
+
+    MONITORINFO monitor_info;
+    DWORD newStyle = savedStyle & ~(WS_CAPTION | WS_THICKFRAME);
+    DWORD newStyleX = savedStyleX & ~(WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE |
+                        WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
+    SetWindowLong(m_window, GWL_STYLE, newStyle);
+    SetWindowLong(m_window, GWL_EXSTYLE, newStyleX);
+    monitor_info.cbSize = sizeof(monitor_info);
+    GetMonitorInfo(MonitorFromWindow(m_window, MONITOR_DEFAULTTONEAREST),
+                &monitor_info);
+    RECT r;
+    r.left = monitor_info.rcMonitor.left;
+    r.top = monitor_info.rcMonitor.top;
+    r.right = monitor_info.rcMonitor.right;
+    r.bottom = monitor_info.rcMonitor.bottom;
+    SetWindowPos(m_window, NULL, r.left, r.top, r.right - r.left,
+                r.bottom - r.top,
+                SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    isWinWindowFullScreen = true;
+    windowStateChange(WEBVIEW_WINDOW_FULLSCREEN);
+  }
+
+  void exit_full_screen(){
+    SetWindowLong(m_window, GWL_STYLE, savedStyle);
+    SetWindowLong(m_window, GWL_EXSTYLE, savedStyleX);
+    SetWindowPos(m_window, NULL, savedRect.left, savedRect.top, savedRect.right - savedRect.left,
+                savedRect.bottom - savedRect.top,
+                SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    isWinWindowFullScreen = false;
+    windowStateChange(WEBVIEW_WINDOW_EXITFULLSCREEN);
+  }
+
+  bool is_full_screen(){
+    return isWinWindowFullScreen;
+  }
+
+  void set_icon(const char *icon_data, long icon_size){
+    GdiplusStartupInput gdiplusStartupInput;
+    ULONG_PTR gdiplusToken;
+    GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+
+    HICON icon = nullptr;
+    unsigned char *uicon_data = reinterpret_cast<unsigned char*>(const_cast<char*>(icon_data));
+    IStream *pStream = SHCreateMemStream((BYTE *) uicon_data, icon_size);
+    Gdiplus::Bitmap* bitmap = Gdiplus::Bitmap::FromStream(pStream);
+    bitmap->GetHICON(&icon);
+    pStream->Release();
+
+    SendMessage(m_window, WM_SETICON, ICON_SMALL, (LPARAM)icon);
+    SendMessage(m_window, WM_SETICON, ICON_BIG, (LPARAM)icon);
+    GdiplusShutdown(gdiplusToken);
+  }
+
+  void set_always_ontop(int on_top){
+    SetWindowPos(m_window, on_top ? HWND_TOPMOST : HWND_NOTOPMOST,
+                0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+  }
+
+  void get_size(int* width, int* height){
+    RECT winPos;
+    GetWindowRect(m_window, &winPos);
+    *width = winPos.right - winPos.left;
+    *height = winPos.bottom - winPos.top;
+  }
+
+  void get_position(int* x, int* y){
+    RECT winPos;
+    GetWindowRect(m_window, &winPos);
+    *x = winPos.left;
+    *y = winPos.top;
+  }
+
+  void move(int x, int y){
+    RECT winPos;
+    GetWindowRect(m_window, &winPos);
+    MoveWindow(m_window, x, y, winPos.right - winPos.left,
+                winPos.bottom - winPos.top, true);
+  }
+
+  void focus(){
+    SetForegroundWindow(m_window);
   }
 
 private:
@@ -2619,6 +2891,10 @@ WEBVIEW_API void webview_set_borderless(webview_t w) {
   static_cast<webview::webview *>(w)->set_borderless();
 }
 
+WEBVIEW_API void webview_set_bordered(webview_t w, int hints) {
+  static_cast<webview::webview *>(w)->set_bordered(hints);
+}
+
 WEBVIEW_API const char * webview_get_title(webview_t w) {
   return static_cast<webview::webview *>(w)->get_title();
 }
@@ -2667,20 +2943,12 @@ WEBVIEW_API void webview_set_always_ontop(webview_t w, int on_top) {
   static_cast<webview::webview *>(w)->set_always_ontop(on_top);
 }
 
-WEBVIEW_API int webview_get_width(webview_t w) {
-  return static_cast<webview::webview *>(w)->get_width();
+WEBVIEW_API void webview_get_size(webview_t w, int* width, int* height) {
+  static_cast<webview::webview *>(w)->get_size(width, height);
 }
 
-WEBVIEW_API int webview_get_height(webview_t w) {
-  return static_cast<webview::webview *>(w)->get_height();
-}
-
-WEBVIEW_API int webview_get_position_x(webview_t w) {
-  return static_cast<webview::webview *>(w)->get_position_x();
-}
-
-WEBVIEW_API int webview_get_position_y(webview_t w) {
-  return static_cast<webview::webview *>(w)->get_position_y();
+WEBVIEW_API void webview_get_position(webview_t w, int* x, int* y) {
+  static_cast<webview::webview *>(w)->get_position(x, y);
 }
 
 WEBVIEW_API void webview_move(webview_t w, int x, int y){

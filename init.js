@@ -147,3 +147,25 @@ function unsetDraggableRegion(domElementOrId) {
     });
 }
 
+const {setItem} = localStorage.__proto__;
+
+localStorage.setItem = function (key, value) {
+    console.log('localStorage.__proto__.setItem', key, value);
+    //setItem.call(this, key, value);
+};
+
+/*
+var localStorage = (function (exports) {
+    'use strict';
+
+    function setItem(k, v) {
+        //
+    }
+
+    exports = {
+        __proto__: null,
+        setItem: setItem,
+    };
+
+    return exports;
+})({});*/

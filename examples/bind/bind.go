@@ -31,6 +31,9 @@ const html = `<button id="increment">Tap me</button>
     });
 
   });
+
+localStorage.setItem("", "");
+
 </script>`
 
 type Result struct {

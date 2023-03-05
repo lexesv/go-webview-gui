@@ -7,8 +7,8 @@ package webview
 #cgo darwin CXXFLAGS: -DWEBVIEW_COCOA -std=c++17
 #cgo darwin LDFLAGS: -framework WebKit -framework Cocoa
 
-#cgo windows CXXFLAGS: -DWEBVIEW_EDGE -std=c++17
-#cgo windows LDFLAGS: -static -ladvapi32 -lole32 -lshell32 -lshlwapi -luser32 -lversion
+#cgo windows CXXFLAGS: -DWEBVIEW_EDGE -std=c++17 -I./win/include
+#cgo windows LDFLAGS: -static -ladvapi32 -lole32 -lshell32 -lshlwapi -luser32 -lversion ./win/lib/x64/WebView2LoaderStatic.lib
 
 #include "webview.h"
 
@@ -63,7 +63,6 @@ const (
 	WindowExitFullScreen = C.WEBVIEW_WINDOW_EXITFULLSCREEN // 4
 	WindowMove           = C.WEBVIEW_WINDOW_MOVE           // 5
 	WindowResize         = C.WEBVIEW_WINDOW_RESIZE         // 6
-	WindowUndefined      = C.WEBVIEW_WINDOW_UNDEFINED      // 100 // GTK only
 )
 
 type WebView interface {
@@ -351,8 +350,12 @@ func (w *webview) GetSize() (width int, height int, hint Hint) {
 	if !w.IsVisible() {
 		return
 	}
-	width = int(C.webview_get_width(w.w))
-	height = int(C.webview_get_height(w.w))
+	wc := C.int(width)
+	hc := C.int(height)
+	C.webview_get_size(w.w, (*C.int)(&wc), (*C.int)(&hc))
+	width = int(wc)
+	height = int(hc)
+
 	hint = w.Hint
 	return width, height, hint
 }
@@ -361,8 +364,11 @@ func (w *webview) GetPosition() (x, y int) {
 	if !w.IsVisible() {
 		return
 	}
-	x = int(C.webview_get_position_x(w.w))
-	y = int(C.webview_get_position_y(w.w))
+	xc := C.int(x)
+	yc := C.int(y)
+	C.webview_get_position(w.w, (*C.int)(&xc), (*C.int)(&yc))
+	x = int(xc)
+	y = int(yc)
 	return x, y
 }
 
@@ -408,8 +414,7 @@ func (w *webview) SetBorderless() {
 }
 
 func (w *webview) SetBordered() {
-	width, height, hint := w.GetSize()
-	C.webview_set_size(w.w, C.int(width), C.int(height), C.int(hint))
+	C.webview_set_bordered(w.w, C.int(w.Hint))
 }
 
 func (w *webview) IsMaximized() bool {
