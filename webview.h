@@ -291,8 +291,6 @@ WEBVIEW_API const webview_version_info_t *webview_version();
 
 #include <cstring>
 
-#include "func.h"
-
 
 namespace webview {
 
@@ -1478,10 +1476,12 @@ using browser_engine = detail::cocoa_wkwebview_engine;
 #include <shlwapi.h>
 #include <stdlib.h>
 #include <windows.h>
+#include <gdiplus.h>
 
 #include "WebView2.h"
 
 #ifdef _MSC_VER
+#pragma comment (lib,"Gdiplus.lib")
 #pragma comment(lib, "advapi32.lib")
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "shell32.lib")
@@ -2280,17 +2280,14 @@ public:
       wc.hInstance = hInstance;
       wc.lpszClassName = L"webview";
       wc.hIcon = icon;
-      /*
-      WEBVIEW_WINDOW_FULLSCREEN
-      WEBVIEW_WINDOW_EXITFULLSCREEN
-      */
-      bool isWinWindowFullScreen = false;
+
       wc.lpfnWndProc =
           (WNDPROC)(+[](HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) -> LRESULT {
             auto w = (win32_edge_engine *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
             switch (msg) {
             case WM_SIZE:
               w->resize(hwnd);
+              windowStateChange(WEBVIEW_WINDOW_RESIZE);
               break;
             case WM_CLOSE:
               //DestroyWindow(hwnd);
@@ -2307,9 +2304,6 @@ public:
               break;
             case WM_MOVE:
                 windowStateChange(WEBVIEW_WINDOW_MOVE);
-              break;
-            case WM_SIZE:
-                windowStateChange(WEBVIEW_WINDOW_RESIZE);
               break;
             case WM_DESTROY:
               w->terminate();
@@ -2375,6 +2369,11 @@ public:
   win32_edge_engine &operator=(const win32_edge_engine &other) = delete;
   win32_edge_engine(win32_edge_engine &&other) = delete;
   win32_edge_engine &operator=(win32_edge_engine &&other) = delete;
+
+  bool isWinWindowFullScreen = false;
+  DWORD savedStyle;
+  DWORD savedStyleX;
+  RECT savedRect;
 
   void run() {
     MSG msg;
@@ -2460,13 +2459,12 @@ public:
   }
 
   void set_user_agent(const std::string &ua) {
-    m_webview->Settings->UserAgent = ua;
-    ICoreWebView2Settings *settings = nullptr;
+    ICoreWebView2Settings2 *settings = nullptr;
     auto res = m_webview->get_Settings(&settings);
     if (res != S_OK) {
        return;
     }
-    settings->put_UserAgent(ua);
+    settings->put_UserAgent(widen_string(ua).c_str());
   }
 
   void set_bordered(int hints) {
@@ -2479,7 +2477,7 @@ public:
     SetWindowLong(m_window, GWL_STYLE, style);
   }
 
-  void set_borderless {
+  void set_borderless() {
     DWORD currentStyle = GetWindowLong(m_window, GWL_STYLE);
     currentStyle &= ~(WS_CAPTION | WS_THICKFRAME);
     SetWindowLong(m_window, GWL_STYLE, currentStyle);
@@ -2488,9 +2486,9 @@ public:
   }
 
   const char* get_title() {
-    int len = GetWindowTextLength(hwnd);
+    int len = GetWindowTextLength(m_window);
     const char* title;
-    GetWindowText(hwnd, title, len);
+    GetWindowText(m_window, const_cast<char*>(title), len);
     return title;
   }
 
@@ -2559,9 +2557,9 @@ public:
   }
 
   void set_icon(const char *icon_data, long icon_size){
-    GdiplusStartupInput gdiplusStartupInput;
+    Gdiplus::GdiplusStartupInput gdiplusStartupInput;
     ULONG_PTR gdiplusToken;
-    GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+    Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
     HICON icon = nullptr;
     unsigned char *uicon_data = reinterpret_cast<unsigned char*>(const_cast<char*>(icon_data));
@@ -2572,7 +2570,7 @@ public:
 
     SendMessage(m_window, WM_SETICON, ICON_SMALL, (LPARAM)icon);
     SendMessage(m_window, WM_SETICON, ICON_BIG, (LPARAM)icon);
-    GdiplusShutdown(gdiplusToken);
+    Gdiplus::GdiplusShutdown(gdiplusToken);
   }
 
   void set_always_ontop(int on_top){
