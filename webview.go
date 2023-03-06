@@ -8,7 +8,7 @@ package webview
 #cgo darwin LDFLAGS: -framework WebKit -framework Cocoa
 
 #cgo windows CXXFLAGS: -DWEBVIEW_EDGE -std=c++17 -I./win/include
-#cgo windows LDFLAGS: -static -static-libstdc++ -static-libgcc -ladvapi32 -lole32 -lshell32 -lshlwapi -luser32 -lversion ./win/lib/x64/WebView2LoaderStatic.lib
+#cgo windows LDFLAGS: -static -static-libstdc++ -static-libgcc -ladvapi32 -lole32 -lshell32 -lshlwapi -luser32 -lversion -l./win/lib/x64/WebView2LoaderStatic.lib
 
 #include "webview.h"
 
