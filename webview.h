@@ -218,6 +218,7 @@ WEBVIEW_API void webview_focus(webview_t w);
 
 WEBVIEW_API void webview_set_event_handler(void (*f)(int));
 
+
 // Binds a native C callback so that it will appear under the given name as a
 // global JavaScript function. Internally it uses webview_init(). Callback
 // receives a request string and a user-provided argument pointer. Request
@@ -1478,7 +1479,23 @@ using browser_engine = detail::cocoa_wkwebview_engine;
 #include <windows.h>
 #include <gdiplus.h>
 
+// Selects whether to use embedded headers for the WebView2 library or external headers.
+// - Don't include embedded header if WEBVIEW_NO_EMBEDDED_WEBVIEW2 is defined.
+// - Include embedded header if it can be detected (convenience for MinGW-w64/GCC).
+// - Include embedded header if WEBVIEW_USE_EMBEDDED_WEBVIEW2 i defined.
+// - Include external header if embedded header has not been included.
+#if !defined(WEBVIEW_NO_EMBEDDED_WEBVIEW2)
+#if defined(__has_include)
+#if __has_include("libs/mswebview2/versions/auto.h")
+#include "libs/mswebview2/versions/auto.h"
+#endif
+#elif defined(WEBVIEW_USE_EMBEDDED_WEBVIEW2)
+#include "libs/mswebview2/versions/auto.h"
+#endif
+#endif
+#ifndef __webview2_h__
 #include "WebView2.h"
+#endif
 
 #ifdef _MSC_VER
 #pragma comment (lib,"Gdiplus.lib")
@@ -2287,13 +2304,13 @@ public:
             switch (msg) {
             case WM_SIZE:
               w->resize(hwnd);
+              if(!windowStateChange) break;
               windowStateChange(WEBVIEW_WINDOW_RESIZE);
               break;
             case WM_CLOSE:
               //DestroyWindow(hwnd);
-              if(windowStateChange){
-                windowStateChange(WEBVIEW_WINDOW_CLOSE);
-              }
+              if(!windowStateChange) break;
+              windowStateChange(WEBVIEW_WINDOW_CLOSE);
               break;
             case WM_ACTIVATE:
               if(!windowStateChange) break;
@@ -2303,6 +2320,7 @@ public:
                 windowStateChange(WEBVIEW_WINDOW_FOCUS);
               break;
             case WM_MOVE:
+                if(!windowStateChange) break;
                 windowStateChange(WEBVIEW_WINDOW_MOVE);
               break;
             case WM_DESTROY:
@@ -2459,37 +2477,36 @@ public:
   }
 
   void set_user_agent(const std::string &ua) {
-    ICoreWebView2Settings2 *settings = nullptr;
+    /*ICoreWebView2Settings2 *settings = nullptr;
     auto res = m_webview->get_Settings(&settings);
     if (res != S_OK) {
        return;
     }
-    settings->put_UserAgent(widen_string(ua).c_str());
+    settings->put_UserAgent(widen_string(ua).c_str());*/
   }
 
   void set_bordered(int hints) {
-    auto style = GetWindowLong(m_window, GWL_STYLE);
-    if (hints == WEBVIEW_HINT_FIXED) {
-      style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
-    } else {
-      style |= (WS_THICKFRAME | WS_MAXIMIZEBOX);
-    }
+    DWORD style = GetWindowLong(m_window, GWL_STYLE);
+    style |= (WS_CAPTION | WS_THICKFRAME);
     SetWindowLong(m_window, GWL_STYLE, style);
+    SetWindowPos(m_window, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE |
+                        SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
   }
 
   void set_borderless() {
-    DWORD currentStyle = GetWindowLong(m_window, GWL_STYLE);
-    currentStyle &= ~(WS_CAPTION | WS_THICKFRAME);
-    SetWindowLong(m_window, GWL_STYLE, currentStyle);
-    SetWindowPos(m_window, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE |
+    DWORD style = GetWindowLong(m_window, GWL_STYLE);
+    style &= ~(WS_CAPTION | WS_THICKFRAME);
+    SetWindowLong(m_window, GWL_STYLE, style);
+    SetWindowPos(m_window, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE |
                     SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
   }
 
   const char* get_title() {
     int len = GetWindowTextLength(m_window);
-    const char* title;
-    GetWindowText(m_window, const_cast<char*>(title), len);
-    return title;
+    std::string title;
+    title.reserve(len + 1);
+    GetWindowText(m_window, const_cast<char*>(title.c_str()), len+1);
+    return title.c_str();
   }
 
   bool is_maximized() {
@@ -2813,9 +2830,6 @@ private:
 };
 } // namespace webview
 
-WEBVIEW_API void webview_set_event_handler(void (*fn)(int)) {
-    webview::windowStateChange = fn;
-}
 
 WEBVIEW_API webview_t webview_create(int debug, void *wnd) {
   auto w = new webview::webview(debug, wnd);
@@ -2872,6 +2886,11 @@ WEBVIEW_API void webview_eval(webview_t w, const char *js) {
   static_cast<webview::webview *>(w)->eval(js);
 }
 
+
+
+WEBVIEW_API void webview_set_event_handler(void (*fn)(int)) {
+    webview::windowStateChange = fn;
+}
 
 WEBVIEW_API void webview_hide(webview_t w) {
   static_cast<webview::webview *>(w)->hide();

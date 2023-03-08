@@ -8,9 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/kardianos/osext"
@@ -27,9 +25,10 @@ type App_ struct {
 }
 
 var (
-	iconData []byte
-	App      = &App_{}
-	html     = `Thanks for using Golang Webview GUI!`
+	iconData     []byte
+	App          = &App_{}
+	html         = `Thanks for using Golang Webview GUI!`
+	ChildWindows []*exec.Cmd
 )
 
 func init() {
@@ -80,8 +79,18 @@ func main() {
 	})
 
 	w.SetContentStateHandler(func(state string) {
-		fmt.Printf("document content state: %s\n", state)
+		fmt.Printf("[0] document content state: %s\n", state)
 	})
+	go func() {
+		for {
+			time.Sleep(time.Millisecond * 500)
+			if !w.IsExistContentStateHandler() {
+				w.SetContentStateHandler(func(state string) {
+					fmt.Printf("[1] document content state: %s\n", state)
+				})
+			}
+		}
+	}()
 
 	systray.Register(onReady(w))
 	w.SetTitle("Systray Example")
@@ -119,7 +128,7 @@ func onReady(w webview.WebView) func() {
 		go func() {
 
 			mShowTitle := systray.AddMenuItem("GetTitle", "")
-			mGetSizePosition := systray.AddMenuItem("Get Size & Position", "")
+			mGetSizePosition := systray.AddMenuItem("Get Size and Position", "")
 			mHide := systray.AddMenuItem("Hide", "")
 			mShow := systray.AddMenuItem("Show", "")
 			mFocus := systray.AddMenuItem("Focus", "")
@@ -148,8 +157,13 @@ func onReady(w webview.WebView) func() {
 			for {
 				select {
 				case <-mQuit.ClickedCh:
-					syscall.Kill(syscall.Getpid(), syscall.SIGINT) // kill child window/s
+					// signal not working on Windows
+					//syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+
+					// kill child processes
+					KillChildWindows()
 					w.Terminate()
+					os.Exit(1)
 				case <-mShowTitle.ClickedCh:
 					zenity.Info(w.GetTitle(), zenity.Title("Info"), zenity.NoIcon)
 				case <-mGetSizePosition.ClickedCh:
@@ -236,11 +250,15 @@ func onReady(w webview.WebView) func() {
 					zenity.Info(w.GetUrl(), zenity.Title("Info"), zenity.NoIcon)
 
 				case <-mGetPageTitle.ClickedCh:
-					w.Navigate("https://golang.org")
-					for w.GetContentState() == "complete" {
-						time.Sleep(time.Millisecond * 250)
-					}
-					zenity.Info(w.GetPageTitle(), zenity.Title("Info"), zenity.NoIcon)
+					w.Dispatch(func() {
+						w.Navigate("https://golang.org")
+						w.SetContentStateHandler(func(state string) {
+							if state == "complete" {
+								zenity.Info(w.GetPageTitle(), zenity.Title("Info"), zenity.NoIcon)
+								w.UnSetContentStateHandler()
+							}
+						})
+					})
 
 				case <-mNewWindow.ClickedCh:
 					p := []string{
@@ -253,19 +271,29 @@ func onReady(w webview.WebView) func() {
 					}
 					cmd := exec.Command(App.File, p...)
 					//fmt.Println(cmd.Args)
-					c := make(chan os.Signal, 2)
-					signal.Notify(c, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGINT)
+
+					// signal not working on Windows
+					/*c := make(chan os.Signal, 2)
+					signal.Notify(c, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM) //
 					go func() {
 						<-c
 						cmd.Process.Kill()
-						os.Exit(1)
-					}()
+					}()*/
+
 					if err := cmd.Start(); err != nil {
 						zenity.Error(err.Error(), zenity.Title("Error"), zenity.ErrorIcon)
+					} else {
+						ChildWindows = append(ChildWindows, cmd)
 					}
 
 				}
 			}
 		}()
+	}
+}
+
+func KillChildWindows() {
+	for _, w := range ChildWindows {
+		w.Process.Kill()
 	}
 }

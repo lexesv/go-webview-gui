@@ -7,8 +7,8 @@ package webview
 #cgo darwin CXXFLAGS: -DWEBVIEW_COCOA -std=c++17
 #cgo darwin LDFLAGS: -framework WebKit -framework Cocoa
 
-#cgo windows CXXFLAGS: -DWEBVIEW_EDGE -std=c++17 -I./win/include
-#cgo windows LDFLAGS: -static -static-libstdc++ -static-libgcc -ladvapi32 -lole32 -lshell32 -lshlwapi -luser32 -lversion -l./win/lib/x64/WebView2LoaderStatic.lib
+#cgo windows CXXFLAGS: -DWEBVIEW_EDGE -std=c++17
+#cgo windows LDFLAGS: -static -static-libstdc++ -static-libgcc -ladvapi32 -lole32 -lshell32 -lshlwapi -luser32 -lversion -lGdiplus
 
 #include "webview.h"
 
@@ -28,7 +28,6 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
-	"time"
 	"unsafe"
 )
 
@@ -92,9 +91,6 @@ type WebView interface {
 	// thread.
 	SetTitle(title string)
 
-	// SetUserAgent sets a custom user agent string for the webview.
-	SetUserAgent(userAgent string)
-
 	// SetSize updates native window size. See Hint constants.
 	SetSize(w int, h int, hint Hint)
 
@@ -129,6 +125,9 @@ type WebView interface {
 	// f must return either value and error or just error
 	Bind(name string, f interface{}) error
 
+	// SetUserAgent sets a custom user agent string for the webview.
+	SetUserAgent(userAgent string)
+
 	// SetWindowEventsHandler sets the window status change event handling function
 	// Should be called before calling the "Run" method
 	// Example:
@@ -143,6 +142,8 @@ type WebView interface {
 	//		}
 	//	})
 	SetWindowEventsHandler(f func(state WindowState))
+
+	UnSetWindowEventsHandler()
 
 	// GetTitle gets the title of the native window.
 	GetTitle() string
@@ -212,21 +213,23 @@ type WebView interface {
 	// Focus set the focus on the native window.
 	Focus()
 
-	// GetContentState gets the current status of the document
-	// uninitialized - Has not started loading
-	// loading - Is loading
-	// loaded - Has been loaded
-	// interactive - Has loaded enough to interact with
-	// complete - Fully loaded
-	GetContentState() string
-
 	// SetContentStateHandler sets the document status change event handling function
 	// Should be called before calling the "Run" method
 	// Example:
 	// w.SetContentStateHandler(func(state string) {
 	//		fmt.Printf("document content state: %s\n", state)
 	// })
+	// Status of the document:
+	// uninitialized - Has not started loading
+	// loading - Is loading
+	// loaded - Has been loaded
+	// interactive - Has loaded enough to interact with
+	// complete - Fully loaded
 	SetContentStateHandler(f func(state string))
+
+	UnSetContentStateHandler()
+
+	IsExistContentStateHandler() bool
 
 	// SetDraggable converts a given DOM element to a draggable region. The user will be able to drag the native window by dragging the given DOM element.
 	// This feature is suitable to make custom window bars along with the borderless mode.
@@ -246,13 +249,12 @@ type webview struct {
 	w                 C.webview_t
 	Hint              Hint
 	Html, Url, PTitle string
-	ContentState      string
 	DraggableElements sync.Map
 }
 
 // EventHandler It is used to intercept changes in the status of the native window
 type eventsHandler struct {
-	handle      func(state WindowState)
+	handle_ws   func(state WindowState)
 	handle_cs   func(state string)
 	exitOnClose bool
 	exitFunc    func()
@@ -275,8 +277,8 @@ func boolToInt(b bool) C.int {
 
 //export event_handler
 func event_handler(state C.int) {
-	if events.handle != nil {
-		events.handle(WindowState(state))
+	if events.handle_ws != nil {
+		events.handle_ws(WindowState(state))
 	}
 	if state == WindowClose && events.exitOnClose {
 		events.exitFunc()
@@ -292,9 +294,14 @@ func New(debug, exitOnClose bool) WebView {
 	}
 	w := &webview{w: res}
 	events.exitOnClose = exitOnClose
-	events.exitFunc = w.Terminate
+	events.exitFunc = w.Exit
 	w.initJSFunc()
 	return w
+}
+
+func (w *webview) Exit() {
+	C.webview_destroy(w.w)
+	os.Exit(1)
 }
 
 func (w *webview) Destroy() {
@@ -307,7 +314,18 @@ func (w *webview) Run() {
 }
 
 func (w *webview) SetWindowEventsHandler(f func(state WindowState)) {
-	events.handle = f
+	events.handle_ws = f
+}
+
+func (w *webview) UnSetWindowEventsHandler() {
+	events.handle_ws = nil
+}
+
+func (w *webview) IsExistWindowEventsHandler() bool {
+	if events.handle_ws == nil {
+		return false
+	}
+	return true
 }
 
 func (w *webview) Terminate() {
@@ -336,14 +354,26 @@ func (w *webview) SetTitle(title string) {
 	C.webview_set_title(w.w, s)
 }
 
+func (w *webview) SetSize(width int, height int, hint Hint) {
+	C.webview_set_size(w.w, C.int(width), C.int(height), C.int(hint))
+}
+
+func (w *webview) Init(js string) {
+	s := C.CString(js)
+	defer C.free(unsafe.Pointer(s))
+	C.webview_init(w.w, s)
+}
+
+func (w *webview) Eval(js string) {
+	s := C.CString(js)
+	defer C.free(unsafe.Pointer(s))
+	C.webview_eval(w.w, s)
+}
+
 func (w *webview) SetUserAgent(userAgent string) {
 	ua := C.CString(userAgent)
 	defer C.free(unsafe.Pointer(ua))
 	C.webview_set_user_agent(w.w, ua)
-}
-
-func (w *webview) SetSize(width int, height int, hint Hint) {
-	C.webview_set_size(w.w, C.int(width), C.int(height), C.int(hint))
 }
 
 func (w *webview) GetSize() (width int, height int, hint Hint) {
@@ -378,18 +408,6 @@ func (w *webview) Move(x, y int) {
 
 func (w *webview) Focus() {
 	C.webview_focus(w.w)
-}
-
-func (w *webview) Init(js string) {
-	s := C.CString(js)
-	defer C.free(unsafe.Pointer(s))
-	C.webview_init(w.w, s)
-}
-
-func (w *webview) Eval(js string) {
-	s := C.CString(js)
-	defer C.free(unsafe.Pointer(s))
-	C.webview_eval(w.w, s)
 }
 
 func (w *webview) Hide() {
@@ -487,18 +505,22 @@ func (w *webview) SetAlwaysOnTop(onTop bool) {
 	C.webview_set_always_ontop(w.w, boolToInt(onTop))
 }
 
-func (w *webview) GetContentState() string {
-	return w.ContentState
-}
-
 func (w *webview) SetContentStateHandler(f func(state string)) {
 	events.handle_cs = f
 }
 
-func (w *webview) GetHtml() string {
-	for w.GetContentState() != "complete" {
-		time.Sleep(time.Millisecond * 150)
+func (w *webview) UnSetContentStateHandler() {
+	events.handle_cs = nil
+}
+
+func (w *webview) IsExistContentStateHandler() bool {
+	if events.handle_cs == nil {
+		return false
 	}
+	return true
+}
+
+func (w *webview) GetHtml() string {
 	return w.Html
 }
 
