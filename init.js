@@ -27,9 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (result === false) {
                         unsetDraggableRegion(e.id).then(result => {
                             window.delDraggebleElement(e.id);
-                            clearInterval(interval);
                             console.log(result);
                         }, error => {
+                            clearInterval(interval);
                             console.log(error, e.id);
                         });
                     }

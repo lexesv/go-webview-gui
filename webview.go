@@ -54,14 +54,18 @@ const (
 
 	// Width and height are maximum bounds
 	HintMax = C.WEBVIEW_HINT_MAX
-
-	WindowClose          = C.WEBVIEW_WINDOW_CLOSE          // 0
-	WindowFocus          = C.WEBVIEW_WINDOW_FOCUS          // 1
-	WindowBlur           = C.WEBVIEW_WINDOW_BLUR           // 2
-	WindowFullScreen     = C.WEBVIEW_WINDOW_FULLSCREEN     // 3
-	WindowExitFullScreen = C.WEBVIEW_WINDOW_EXITFULLSCREEN // 4
-	WindowMove           = C.WEBVIEW_WINDOW_MOVE           // 5
-	WindowResize         = C.WEBVIEW_WINDOW_RESIZE         // 6
+	//--------------------------------------------------------- MacOS Linux Windows
+	WindowClose          = C.WEBVIEW_WINDOW_CLOSE          // 0   +     +
+	WindowFocus          = C.WEBVIEW_WINDOW_FOCUS          // 1   +     +
+	WindowBlur           = C.WEBVIEW_WINDOW_BLUR           // 2   +     +
+	WindowMove           = C.WEBVIEW_WINDOW_MOVE           // 3   +     +
+	WindowResize         = C.WEBVIEW_WINDOW_RESIZE         // 4   +     +
+	WindowFullScreen     = C.WEBVIEW_WINDOW_FULLSCREEN     // 5   +     +
+	WindowExitFullScreen = C.WEBVIEW_WINDOW_EXITFULLSCREEN // 6   +     +
+	WindowMaximized      = C.WEBVIEW_WINDOW_MAXIMIZED      // 7   -     +
+	WindowUnmaximized    = C.WEBVIEW_WINDOW_UNMAXIMIZED    // 8   -     +
+	WindowMinimize       = C.WEBVIEW_WINDOW_MINIMIZE       // 9   +     +
+	WindowUnminimize     = C.WEBVIEW_WINDOW_UNMINIMIZE     // 10  +     +
 )
 
 type WebView interface {
@@ -168,6 +172,9 @@ type WebView interface {
 
 	// Unmaximize unmaximizes the native window.
 	Unmaximize()
+
+	// IsMinimized If the native window is minimized it returns true, otherwise false.
+	IsMinimized() bool
 
 	// Minimize minimizes the native window.
 	Minimize()
@@ -422,6 +429,13 @@ func (w *webview) Show() {
 	}
 }
 
+func (w *webview) IsVisible() bool {
+	if C.webview_is_visible(w.w) != 0 {
+		return true
+	}
+	return false
+}
+
 func (w *webview) GetTitle() string {
 	s := C.webview_get_title(w.w)
 	return C.GoString(s)
@@ -443,42 +457,47 @@ func (w *webview) IsMaximized() bool {
 }
 
 func (w *webview) Maximize() {
-	if !w.IsMaximized() {
-		C.webview_maximize(w.w)
+	if w.IsMaximized() {
+		return
 	}
+	C.webview_maximize(w.w)
 }
 
 func (w *webview) Unmaximize() {
-	if w.IsMaximized() {
-		C.webview_unmaximize(w.w)
+	if !w.IsMaximized() {
+		return
 	}
+	C.webview_unmaximize(w.w)
 }
 
-func (w *webview) Minimize() {
-	C.webview_minimize(w.w)
-}
-
-func (w *webview) Unminimize() {
-	C.webview_unminimize(w.w)
-}
-
-func (w *webview) IsVisible() bool {
-	if C.webview_is_visible(w.w) != 0 {
+// IsMinimized Not worked with Stage Manager (MacOS)
+func (w *webview) IsMinimized() bool {
+	if C.webview_is_minimized(w.w) != 0 {
 		return true
 	}
 	return false
 }
 
-func (w *webview) SetFullScreen() {
-	if !w.IsFullScreen() {
-		C.webview_set_full_screen(w.w)
+func (w *webview) Minimize() {
+	if w.IsMinimized() {
+		return
 	}
+	C.webview_minimize(w.w)
+}
+
+func (w *webview) Unminimize() {
+	if !w.IsMinimized() {
+		return
+	}
+	C.webview_unminimize(w.w)
+}
+
+func (w *webview) SetFullScreen() {
+	C.webview_set_full_screen(w.w)
 }
 
 func (w *webview) ExitFullScreen() {
-	if w.IsFullScreen() {
-		C.webview_exit_full_screen(w.w)
-	}
+	C.webview_exit_full_screen(w.w)
 }
 
 func (w *webview) IsFullScreen() bool {
@@ -520,6 +539,14 @@ func (w *webview) IsExistContentStateHandler() bool {
 	return true
 }
 
+func (w *webview) SetDraggable(id string) {
+	w.DraggableElements.Store(id, true)
+}
+
+func (w *webview) UnSetDraggable(id string) {
+	w.DraggableElements.Store(id, false)
+}
+
 func (w *webview) GetHtml() string {
 	return w.Html
 }
@@ -530,14 +557,6 @@ func (w *webview) GetPageTitle() string {
 
 func (w *webview) GetUrl() string {
 	return w.Url
-}
-
-func (w *webview) SetDraggable(id string) {
-	w.DraggableElements.Store(id, true)
-}
-
-func (w *webview) UnSetDraggable(id string) {
-	w.DraggableElements.Store(id, false)
 }
 
 func (w *webview) Dispatch(f func()) {

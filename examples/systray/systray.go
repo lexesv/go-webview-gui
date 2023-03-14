@@ -70,11 +70,31 @@ func main() {
 		//fmt.Println(state)
 		switch state {
 		case webview.WindowClose:
+			fmt.Println("Window state: WindowClose")
 			w.Hide() // Click "Show" after
 		case webview.WindowResize:
 			// Example: save window size for restore in next launch
+			fmt.Println("Window state: WindowResize")
 		case webview.WindowMove:
 			// Example: save window position for restore in next launch
+			fmt.Println("Window state: WindowMove")
+		case webview.WindowFocus:
+			fmt.Println("Window state: WindowFocus")
+		case webview.WindowBlur:
+			fmt.Println("Window state: WindowBlur")
+		case webview.WindowFullScreen:
+			fmt.Println("Window state: WindowFullScreen")
+		case webview.WindowExitFullScreen:
+			fmt.Println("Window state: WindowExitFullScreen")
+		case webview.WindowMinimize:
+			fmt.Println("Window state: WindowMinimize")
+		case webview.WindowUnminimize:
+			fmt.Println("Window state: WindowUnminimize")
+		case webview.WindowMaximized:
+			fmt.Println("Window state: WindowMaximized")
+		case webview.WindowUnmaximized:
+			fmt.Println("Window state: WindowUnmaximized")
+
 		}
 	})
 
@@ -166,6 +186,9 @@ func onReady(w webview.WebView) func() {
 					os.Exit(1)
 				case <-mShowTitle.ClickedCh:
 					zenity.Info(w.GetTitle(), zenity.Title("Info"), zenity.NoIcon)
+					w.Dispatch(func() {
+						w.Focus() //
+					})
 				case <-mGetSizePosition.ClickedCh:
 					width, height, hint := w.GetSize()
 					x, y := w.GetPosition()

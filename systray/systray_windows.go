@@ -795,13 +795,19 @@ func iconBytesToFilePath(iconBytes []byte) (string, error) {
 // iconBytes should be the content of .ico for windows and .ico/.jpg/.png
 // for other platforms.
 func SetIcon(iconBytes []byte) {
+	var err error
+	iconBytes, err = convert(iconBytes)
+	if err != nil {
+		log.Errorf("Unable to convert icon data: %v", err)
+		return
+	}
 	iconFilePath, err := iconBytesToFilePath(iconBytes)
 	if err != nil {
 		log.Errorf("Unable to write icon data to temp file: %v", err)
 		return
 	}
-	if err := wt.setIcon(iconFilePath); err != nil {
-		log.Errorf("Unable to set icon: %v", err)
+	if err = wt.setIcon(iconFilePath); err != nil {
+		log.Errorf("Unable to set icon: %v", err.Error())
 		return
 	}
 }

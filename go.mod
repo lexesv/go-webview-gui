@@ -3,7 +3,9 @@ module github.com/lexesv/go-webview-gui
 go 1.19
 
 require (
+	github.com/Kodeworks/golang-image-ico v0.0.0-20141118225523-73f0f4cfade9
 	github.com/TheTitanrain/w32 v0.0.0-20200114052255-2654d97dbd3d
+	github.com/gabriel-vasile/mimetype v1.4.2
 	github.com/getlantern/golog v0.0.0-20190830074920-4ef2e798c2d7
 	github.com/ghostiam/systray v1.3.0
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
@@ -12,7 +14,7 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/sqweek/dialog v0.0.0-20220809060634-e981b270ebbf
 	github.com/webview/webview v0.0.0-20230210061304-7b40e46d97e9
-	golang.org/x/sys v0.5.0
+	golang.org/x/sys v0.6.0
 )
 
 require (
@@ -33,4 +35,5 @@ require (
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 	github.com/randall77/makefat v0.0.0-20210315173500-7ddd0e42c844 // indirect
 	golang.org/x/image v0.4.0 // indirect
+	golang.org/x/net v0.8.0 // indirect
 )

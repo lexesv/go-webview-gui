@@ -140,10 +140,14 @@ WEBVIEW_API void webview_set_title(webview_t w, const char *title);
 #define WEBVIEW_WINDOW_CLOSE 0
 #define WEBVIEW_WINDOW_FOCUS 1
 #define WEBVIEW_WINDOW_BLUR 2
-#define WEBVIEW_WINDOW_FULLSCREEN 3
-#define WEBVIEW_WINDOW_EXITFULLSCREEN 4
-#define WEBVIEW_WINDOW_MOVE 5
-#define WEBVIEW_WINDOW_RESIZE 6
+#define WEBVIEW_WINDOW_MOVE 3
+#define WEBVIEW_WINDOW_RESIZE 4
+#define WEBVIEW_WINDOW_FULLSCREEN 5
+#define WEBVIEW_WINDOW_EXITFULLSCREEN 6
+#define WEBVIEW_WINDOW_MAXIMIZED 7
+#define WEBVIEW_WINDOW_UNMAXIMIZED 8
+#define WEBVIEW_WINDOW_MINIMIZE 9
+#define WEBVIEW_WINDOW_UNMINIMIZE 10
 
 // Updates native window size. See WEBVIEW_HINT constants.
 WEBVIEW_API void webview_set_size(webview_t w, int width, int height,
@@ -189,6 +193,8 @@ WEBVIEW_API int webview_is_maximized(webview_t w);
 WEBVIEW_API void webview_maximize(webview_t w);
 
 WEBVIEW_API void webview_unmaximize(webview_t w);
+
+WEBVIEW_API int webview_is_minimized(webview_t w);
 
 WEBVIEW_API void webview_minimize(webview_t w);
 
@@ -577,6 +583,8 @@ inline std::string json_parse(const std::string &s, const std::string &key,
 #include <JavaScriptCore/JavaScript.h>
 #include <gtk/gtk.h>
 #include <webkit2/webkit2.h>
+bool isGtkWindowFullscreen;
+bool isGtkWindowMinimized;
 
 namespace webview {
 namespace detail {
@@ -585,11 +593,12 @@ class gtk_webkit_engine {
 public:
   gtk_webkit_engine(bool debug, void *window)
       : m_window(static_cast<GtkWidget *>(window)) {
+
     if (gtk_init_check(nullptr, nullptr) == FALSE) {
       return;
     }
     m_window = static_cast<GtkWidget *>(window);
-    bool isGtkWindowFullScreen = false;
+
     if (m_window == nullptr) {
       m_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     }
@@ -616,21 +625,39 @@ public:
         G_CALLBACK(+[](GtkWidget *widget, GdkEventWindowState *event, gpointer user_data) {
             if(!windowStateChange) return;
             if(event->changed_mask & GDK_WINDOW_STATE_FULLSCREEN){
-                if(event->new_window_state & WEBVIEW_WINDOW_FULLSCREEN){
-                   isGtkWindowFullScreen = true;
+                if(event->new_window_state & GDK_WINDOW_STATE_FULLSCREEN){
                    windowStateChange(WEBVIEW_WINDOW_FULLSCREEN);
+                   isGtkWindowFullscreen = true;
                 }
                 else {
-                   isGtkWindowFullScreen = false;
                    windowStateChange(WEBVIEW_WINDOW_EXITFULLSCREEN);
+                   isGtkWindowFullscreen = false;
                 }
             }
-            else if(event->changed_mask & GDK_WINDOW_STATE_FOCUSED) {
+            if(event->changed_mask & GDK_WINDOW_STATE_FOCUSED) {
                 if(event->new_window_state & GDK_WINDOW_STATE_FOCUSED){
                    windowStateChange(WEBVIEW_WINDOW_FOCUS);
                 }
                 else {
                     windowStateChange(WEBVIEW_WINDOW_BLUR);
+                }
+            }
+            if(event->changed_mask & GDK_WINDOW_STATE_MAXIMIZED) {
+                if(event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED){
+                   windowStateChange(WEBVIEW_WINDOW_MAXIMIZED);
+                }
+                else {
+                    windowStateChange(WEBVIEW_WINDOW_UNMAXIMIZED);
+                }
+            }
+            if(event->changed_mask & GDK_WINDOW_STATE_ICONIFIED) {
+                if(event->new_window_state & GDK_WINDOW_STATE_ICONIFIED){
+                   windowStateChange(WEBVIEW_WINDOW_MINIMIZE);
+                   isGtkWindowMinimized = true;
+                }
+                else {
+                    windowStateChange(WEBVIEW_WINDOW_UNMINIMIZE);
+                    isGtkWindowMinimized = false;
                 }
             }
         }),
@@ -646,11 +673,13 @@ public:
     // check-resize
     g_signal_connect(G_OBJECT(m_window), "size-allocate",
             G_CALLBACK(+[](GtkWidget *widget, GdkEventWindowState *event, gpointer user_data) {
-                windowStateChange(WEBVIEW_WINDOW_RESIZE);
+               if(windowStateChange)
+                 windowStateChange(WEBVIEW_WINDOW_RESIZE);
             }), nullptr);
 
     g_signal_connect(G_OBJECT(m_window), "configure-event",
              G_CALLBACK(+[](GtkWidget *widget, GdkEventWindowState *event, gpointer user_data) {
+                if(windowStateChange)
                  windowStateChange(WEBVIEW_WINDOW_MOVE);
              }), nullptr);
 
@@ -732,24 +761,24 @@ public:
   }
 
   void hide() {
-    gtk_widget_hide(m_webview);
+    gtk_widget_hide(m_window);
   }
 
   void show() {
-    gtk_widget_show(m_webview);
+    gtk_widget_show(m_window);
   }
 
   void set_user_agent(const std::string &ua) {
     WebKitSettings *settings = webkit_web_view_get_settings(WEBKIT_WEB_VIEW(m_webview));
-    webkit_settings_set_user_agent (settings, ua.c_str())
+    webkit_settings_set_user_agent(settings, ua.c_str());
   }
 
   void set_bordered(int hints) {
-    gtk_window_set_decorated(GTK_WINDOW(m_webview), true);
+    gtk_window_set_decorated(GTK_WINDOW(m_window), true);
   }
 
-  void set_borderless {
-    gtk_window_set_decorated(GTK_WINDOW(m_webview), false);
+  void set_borderless() {
+    gtk_window_set_decorated(GTK_WINDOW(m_window), false);
   }
 
   const char* get_title() {
@@ -767,6 +796,10 @@ public:
 
   void unmaximize() {
     gtk_window_unmaximize(GTK_WINDOW(m_window));
+  }
+
+  bool is_minimized() {
+    return isGtkWindowMinimized;
   }
 
   void minimize() {
@@ -790,7 +823,7 @@ public:
   }
 
   bool is_full_screen(){
-    return isGtkWindowFullScreen;
+     return isGtkWindowFullscreen;
   }
 
   void set_icon(const char *icon_data, long icon_size){
@@ -806,15 +839,15 @@ public:
   }
 
   void set_always_ontop(int on_top){
-      gtk_window_set_keep_above(GTK_WINDOW(m_window), on_top)
+      gtk_window_set_keep_above(GTK_WINDOW(m_window), on_top);
   }
 
   void get_size(int* width, int* height){
-      gtk_window_get_size(GTK_WINDOW(m_window), &width, &height);
+      gtk_window_get_size(GTK_WINDOW(m_window), width, height);
   }
 
   void get_position(int* x, int* y){
-    gdk_window_get_root_origin(gtk_widget_get_window(m_window), &x, &y);
+    gdk_window_get_root_origin(gtk_widget_get_window(m_window), x, y);
   }
 
   void move(int x, int y){
@@ -1094,6 +1127,10 @@ public:
     objc::msg_send<void>(m_window, "zoom:"_sel, NULL);
   }
 
+  bool is_minimized() {
+      return objc::msg_send<bool>(m_window, "isMiniaturized"_sel, NULL);
+  }
+
   void minimize() {
     /*((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
         "miniaturize:"_sel, NULL);*/
@@ -1114,20 +1151,17 @@ public:
   }
 
   void set_full_screen(){
-    /*((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
-            "toggleFullScreen:"_sel, NULL);*/
+    /*((void (*)(id, SEL, id))objc_msgSend)((id) m_window, "toggleFullScreen:"_sel, NULL);*/
     objc::msg_send<void>(m_window, "toggleFullScreen:"_sel, NULL);
   }
 
   void exit_full_screen(){
-    /*((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
-            "toggleFullScreen:"_sel, NULL);*/
+    /*((void (*)(id, SEL, id))objc_msgSend)((id) m_window, "toggleFullScreen:"_sel, NULL);*/
     objc::msg_send<void>(m_window, "toggleFullScreen:"_sel, NULL);
   }
 
   bool is_full_screen(){
-    /*unsigned long windowStyleMask = ((unsigned long (*)(id, SEL))objc_msgSend)(
-        (id) m_window, "styleMask"_sel);*/
+    //unsigned long windowStyleMask = ((unsigned long (*)(id, SEL))objc_msgSend)((id) m_window, "styleMask"_sel);
     unsigned long windowStyleMask = objc::msg_send<unsigned long>(m_window, "styleMask"_sel);
     return (windowStyleMask & NSWindowStyleMaskFullScreen) == NSWindowStyleMaskFullScreen;
   }
@@ -1194,7 +1228,13 @@ public:
   void focus(){
     /*((void (*)(id, SEL, id))objc_msgSend)((id) m_window,
             "orderFront:"_sel, NULL);*/
-    objc::msg_send<void>(m_window, "orderFront:"_sel, NULL);
+    /*objc::msg_send<void>(m_window, "setLevel:"_sel,
+        objc::msg_send<id>("NSString"_cls, "stringWithUTF8String:"_sel, "NSStatusWindowLevel"));*/
+
+    objc::msg_send<void>(m_window, "makeKeyAndOrderFront:"_sel, NULL);
+    objc::msg_send<void>(
+        objc::msg_send<id(*)>("NSApplication"_cls, "sharedApplication"_sel), "activateIgnoringOtherApps:"_sel,
+            objc::msg_send<id>("NSString"_cls, "stringWithUTF8String:"_sel, "YES"));
   }
 
 
@@ -1386,6 +1426,16 @@ private:
                     (IMP)(+[](id, SEL, id) {
                         if(windowStateChange)
                           windowStateChange(WEBVIEW_WINDOW_EXITFULLSCREEN);
+                    }), "c@:@");
+    class_addMethod(wcls, "windowDidMiniaturize:"_sel,
+                    (IMP)(+[](id, SEL, id) {
+                        if(windowStateChange)
+                          windowStateChange(WEBVIEW_WINDOW_MINIMIZE);
+                    }), "c@:@");
+    class_addMethod(wcls, "windowDidDeminiaturize:"_sel,
+                    (IMP)(+[](id, SEL, id) {
+                        if(windowStateChange)
+                          windowStateChange(WEBVIEW_WINDOW_UNMINIMIZE);
                     }), "c@:@");
 
     objc_registerClassPair(wcls);
@@ -2305,7 +2355,14 @@ public:
             case WM_SIZE:
               w->resize(hwnd);
               if(!windowStateChange) break;
-              windowStateChange(WEBVIEW_WINDOW_RESIZE);
+              if(LOWORD(wp) == SIZE_MAXIMIZED)
+                windowStateChange(WEBVIEW_WINDOW_MAXIMIZED);
+              if(LOWORD(wp) == SIZE_MINIMIZED)
+                windowStateChange(WEBVIEW_WINDOW_UNMAXIMIZED);
+              break;
+            case WM_SIZING:
+               if(!windowStateChange) break;
+                 windowStateChange(WEBVIEW_WINDOW_RESIZE);
               break;
             case WM_CLOSE:
               //DestroyWindow(hwnd);
@@ -2388,7 +2445,6 @@ public:
   win32_edge_engine(win32_edge_engine &&other) = delete;
   win32_edge_engine &operator=(win32_edge_engine &&other) = delete;
 
-  bool isWinWindowFullScreen = false;
   DWORD savedStyle;
   DWORD savedStyleX;
   RECT savedRect;
@@ -2555,8 +2611,6 @@ public:
     SetWindowPos(m_window, NULL, r.left, r.top, r.right - r.left,
                 r.bottom - r.top,
                 SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-    isWinWindowFullScreen = true;
-    windowStateChange(WEBVIEW_WINDOW_FULLSCREEN);
   }
 
   void exit_full_screen(){
@@ -2565,12 +2619,16 @@ public:
     SetWindowPos(m_window, NULL, savedRect.left, savedRect.top, savedRect.right - savedRect.left,
                 savedRect.bottom - savedRect.top,
                 SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-    isWinWindowFullScreen = false;
-    windowStateChange(WEBVIEW_WINDOW_EXITFULLSCREEN);
   }
 
   bool is_full_screen(){
-    return isWinWindowFullScreen;
+    RECT a, b;
+    GetWindowRect(window, &a);
+    GetWindowRect(GetDesktopWindow(), &b);
+    return (a.left   == b.left  &&
+            a.top    == b.top   &&
+            a.right  == b.right &&
+            a.bottom == b.bottom);
   }
 
   void set_icon(const char *icon_data, long icon_size){
@@ -2922,6 +2980,10 @@ WEBVIEW_API void webview_maximize(webview_t w) {
 
 WEBVIEW_API void webview_unmaximize(webview_t w) {
   static_cast<webview::webview *>(w)->unmaximize();
+}
+
+WEBVIEW_API int webview_is_minimized(webview_t w) {
+  return static_cast<webview::webview *>(w)->is_minimized();
 }
 
 WEBVIEW_API void webview_minimize(webview_t w) {
