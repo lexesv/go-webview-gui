@@ -66,6 +66,7 @@ const (
 	WindowUnmaximized    = C.WEBVIEW_WINDOW_UNMAXIMIZED    // 8   -     +
 	WindowMinimize       = C.WEBVIEW_WINDOW_MINIMIZE       // 9   +     +
 	WindowUnminimize     = C.WEBVIEW_WINDOW_UNMINIMIZE     // 10  +     +
+	// WindowMinimize WindowUnminimize - Does not work with Stage Manager (MacOS)
 )
 
 type WebView interface {
@@ -174,6 +175,7 @@ type WebView interface {
 	Unmaximize()
 
 	// IsMinimized If the native window is minimized it returns true, otherwise false.
+	// IsMinimized Does not work with Stage Manager (MacOS)
 	IsMinimized() bool
 
 	// Minimize minimizes the native window.
@@ -470,7 +472,6 @@ func (w *webview) Unmaximize() {
 	C.webview_unmaximize(w.w)
 }
 
-// IsMinimized Not worked with Stage Manager (MacOS)
 func (w *webview) IsMinimized() bool {
 	if C.webview_is_minimized(w.w) != 0 {
 		return true
