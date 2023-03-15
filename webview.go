@@ -55,17 +55,17 @@ const (
 	// Width and height are maximum bounds
 	HintMax = C.WEBVIEW_HINT_MAX
 	//--------------------------------------------------------- MacOS Linux Windows
-	WindowClose          = C.WEBVIEW_WINDOW_CLOSE          // 0   +     +
-	WindowFocus          = C.WEBVIEW_WINDOW_FOCUS          // 1   +     +
-	WindowBlur           = C.WEBVIEW_WINDOW_BLUR           // 2   +     +
-	WindowMove           = C.WEBVIEW_WINDOW_MOVE           // 3   +     +
-	WindowResize         = C.WEBVIEW_WINDOW_RESIZE         // 4   +     +
-	WindowFullScreen     = C.WEBVIEW_WINDOW_FULLSCREEN     // 5   +     +
-	WindowExitFullScreen = C.WEBVIEW_WINDOW_EXITFULLSCREEN // 6   +     +
-	WindowMaximized      = C.WEBVIEW_WINDOW_MAXIMIZED      // 7   -     +
-	WindowUnmaximized    = C.WEBVIEW_WINDOW_UNMAXIMIZED    // 8   -     +
-	WindowMinimize       = C.WEBVIEW_WINDOW_MINIMIZE       // 9   +     +
-	WindowUnminimize     = C.WEBVIEW_WINDOW_UNMINIMIZE     // 10  +     +
+	WindowClose          = C.WEBVIEW_WINDOW_CLOSE          // 0   +     +     +
+	WindowFocus          = C.WEBVIEW_WINDOW_FOCUS          // 1   +     +     +
+	WindowBlur           = C.WEBVIEW_WINDOW_BLUR           // 2   +     +     +
+	WindowMove           = C.WEBVIEW_WINDOW_MOVE           // 3   +     +     +
+	WindowResize         = C.WEBVIEW_WINDOW_RESIZE         // 4   +     +     +
+	WindowFullScreen     = C.WEBVIEW_WINDOW_FULLSCREEN     // 5   +     +     +
+	WindowExitFullScreen = C.WEBVIEW_WINDOW_EXITFULLSCREEN // 6   +     +     +
+	WindowMaximize       = C.WEBVIEW_WINDOW_MAXIMIZE       // 7   -     +     +
+	WindowUnmaximize     = C.WEBVIEW_WINDOW_UNMAXIMIZE     // 8   -     +     -
+	WindowMinimize       = C.WEBVIEW_WINDOW_MINIMIZE       // 9   +     +     +
+	WindowUnminimize     = C.WEBVIEW_WINDOW_UNMINIMIZE     // 10  +     +     -
 	// WindowMinimize WindowUnminimize - Does not work with Stage Manager (MacOS)
 )
 
@@ -146,9 +146,9 @@ type WebView interface {
 	//			// Example: save window position for restore in next launch
 	//		}
 	//	})
-	SetWindowEventsHandler(f func(state WindowState))
+	SetWindowEventsHandler(key string, f func(state WindowState))
 
-	UnSetWindowEventsHandler()
+	UnSetWindowEventsHandler(key string)
 
 	// GetTitle gets the title of the native window.
 	GetTitle() string
@@ -234,9 +234,9 @@ type WebView interface {
 	// loaded - Has been loaded
 	// interactive - Has loaded enough to interact with
 	// complete - Fully loaded
-	SetContentStateHandler(f func(state string))
+	SetContentStateHandler(key string, f func(state string))
 
-	UnSetContentStateHandler()
+	UnSetContentStateHandler(key string)
 
 	IsExistContentStateHandler() bool
 
@@ -263,8 +263,8 @@ type webview struct {
 
 // EventHandler It is used to intercept changes in the status of the native window
 type eventsHandler struct {
-	handle_ws   func(state WindowState)
-	handle_cs   func(state string)
+	handle_ws   map[string]func(state WindowState)
+	handle_cs   map[string]func(state string)
 	exitOnClose bool
 	exitFunc    func()
 }
@@ -287,7 +287,9 @@ func boolToInt(b bool) C.int {
 //export event_handler
 func event_handler(state C.int) {
 	if events.handle_ws != nil {
-		events.handle_ws(WindowState(state))
+		for _, f := range events.handle_ws {
+			f(WindowState(state))
+		}
 	}
 	if state == WindowClose && events.exitOnClose {
 		events.exitFunc()
@@ -302,6 +304,8 @@ func New(debug, exitOnClose bool) WebView {
 		return nil
 	}
 	w := &webview{w: res}
+	events.handle_ws = make(map[string]func(state WindowState))
+	events.handle_cs = make(map[string]func(state string))
 	events.exitOnClose = exitOnClose
 	events.exitFunc = w.Exit
 	w.initJSFunc()
@@ -322,12 +326,12 @@ func (w *webview) Run() {
 	C.webview_run(w.w)
 }
 
-func (w *webview) SetWindowEventsHandler(f func(state WindowState)) {
-	events.handle_ws = f
+func (w *webview) SetWindowEventsHandler(key string, f func(state WindowState)) {
+	events.handle_ws[key] = f
 }
 
-func (w *webview) UnSetWindowEventsHandler() {
-	events.handle_ws = nil
+func (w *webview) UnSetWindowEventsHandler(key string) {
+	delete(events.handle_ws, key)
 }
 
 func (w *webview) IsExistWindowEventsHandler() bool {
@@ -494,10 +498,16 @@ func (w *webview) Unminimize() {
 }
 
 func (w *webview) SetFullScreen() {
+	if w.IsFullScreen() {
+		return
+	}
 	C.webview_set_full_screen(w.w)
 }
 
 func (w *webview) ExitFullScreen() {
+	if !w.IsFullScreen() {
+		return
+	}
 	C.webview_exit_full_screen(w.w)
 }
 
@@ -525,12 +535,12 @@ func (w *webview) SetAlwaysOnTop(onTop bool) {
 	C.webview_set_always_ontop(w.w, boolToInt(onTop))
 }
 
-func (w *webview) SetContentStateHandler(f func(state string)) {
-	events.handle_cs = f
+func (w *webview) SetContentStateHandler(key string, f func(state string)) {
+	events.handle_cs[key] = f
 }
 
-func (w *webview) UnSetContentStateHandler() {
-	events.handle_cs = nil
+func (w *webview) UnSetContentStateHandler(key string) {
+	delete(events.handle_cs, key)
 }
 
 func (w *webview) IsExistContentStateHandler() bool {

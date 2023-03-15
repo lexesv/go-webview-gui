@@ -44,7 +44,9 @@ func (w *webview) initJSFunc() {
 
 	w.Bind("contentState", func(s string) {
 		if events.handle_cs != nil {
-			events.handle_cs(s)
+			for _, f := range events.handle_cs {
+				f(s)
+			}
 		}
 	})
 

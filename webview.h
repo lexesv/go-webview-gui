@@ -144,8 +144,8 @@ WEBVIEW_API void webview_set_title(webview_t w, const char *title);
 #define WEBVIEW_WINDOW_RESIZE 4
 #define WEBVIEW_WINDOW_FULLSCREEN 5
 #define WEBVIEW_WINDOW_EXITFULLSCREEN 6
-#define WEBVIEW_WINDOW_MAXIMIZED 7
-#define WEBVIEW_WINDOW_UNMAXIMIZED 8
+#define WEBVIEW_WINDOW_MAXIMIZE 7
+#define WEBVIEW_WINDOW_UNMAXIMIZE 8
 #define WEBVIEW_WINDOW_MINIMIZE 9
 #define WEBVIEW_WINDOW_UNMINIMIZE 10
 
@@ -644,10 +644,10 @@ public:
             }
             if(event->changed_mask & GDK_WINDOW_STATE_MAXIMIZED) {
                 if(event->new_window_state & GDK_WINDOW_STATE_MAXIMIZED){
-                   windowStateChange(WEBVIEW_WINDOW_MAXIMIZED);
+                   windowStateChange(WEBVIEW_WINDOW_MAXIMIZE);
                 }
                 else {
-                    windowStateChange(WEBVIEW_WINDOW_UNMAXIMIZED);
+                    windowStateChange(WEBVIEW_WINDOW_UNMAXIMIZE);
                 }
             }
             if(event->changed_mask & GDK_WINDOW_STATE_ICONIFIED) {
@@ -2356,9 +2356,9 @@ public:
               w->resize(hwnd);
               if(!windowStateChange) break;
               if(LOWORD(wp) == SIZE_MAXIMIZED)
-                windowStateChange(WEBVIEW_WINDOW_MAXIMIZED);
+                windowStateChange(WEBVIEW_WINDOW_MAXIMIZE);
               if(LOWORD(wp) == SIZE_MINIMIZED)
-                windowStateChange(WEBVIEW_WINDOW_UNMAXIMIZED);
+                windowStateChange(WEBVIEW_WINDOW_MINIMIZE);
               break;
             case WM_SIZING:
                if(!windowStateChange) break;
@@ -2379,6 +2379,15 @@ public:
             case WM_MOVE:
                 if(!windowStateChange) break;
                 windowStateChange(WEBVIEW_WINDOW_MOVE);
+                // fullscreen detect
+                if (w->is_full_screen()){
+                  windowStateChange(WEBVIEW_WINDOW_FULLSCREEN);
+                  w->lastFullScreenStatus = true;
+                } else {
+                   if (!w->lastFullScreenStatus) break;
+                   windowStateChange(WEBVIEW_WINDOW_EXITFULLSCREEN);
+                   w->lastFullScreenStatus = false;
+                }
               break;
             case WM_DESTROY:
               w->terminate();
@@ -2448,6 +2457,7 @@ public:
   DWORD savedStyle;
   DWORD savedStyleX;
   RECT savedRect;
+  bool lastFullScreenStatus;
 
   void run() {
     MSG msg;
@@ -2566,7 +2576,7 @@ public:
   }
 
   bool is_maximized() {
-    return  IsZoomed(m_window) == 1;
+    return IsZoomed(m_window) == 1;
   }
 
   void maximize() {
@@ -2575,6 +2585,10 @@ public:
 
   void unmaximize() {
     ShowWindow(m_window, SW_RESTORE);
+  }
+
+  bool is_minimized() {
+      return IsIconic(m_window) == 1;
   }
 
   void minimize() {
@@ -2623,7 +2637,7 @@ public:
 
   bool is_full_screen(){
     RECT a, b;
-    GetWindowRect(window, &a);
+    GetWindowRect(m_window, &a);
     GetWindowRect(GetDesktopWindow(), &b);
     return (a.left   == b.left  &&
             a.top    == b.top   &&

@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"time"
 
 	"github.com/kardianos/osext"
 	"github.com/lexesv/go-webview-gui"
@@ -66,7 +65,7 @@ func main() {
 	w := webview.New(true, false)
 	defer w.Destroy()
 
-	w.SetWindowEventsHandler(func(state webview.WindowState) {
+	w.SetWindowEventsHandler("main", func(state webview.WindowState) {
 		//fmt.Println(state)
 		switch state {
 		case webview.WindowClose:
@@ -90,18 +89,18 @@ func main() {
 			fmt.Println("Window state: WindowMinimize")
 		case webview.WindowUnminimize:
 			fmt.Println("Window state: WindowUnminimize")
-		case webview.WindowMaximized:
-			fmt.Println("Window state: WindowMaximized")
-		case webview.WindowUnmaximized:
-			fmt.Println("Window state: WindowUnmaximized")
+		case webview.WindowMaximize:
+			fmt.Println("Window state: WindowMaximize")
+		case webview.WindowUnmaximize:
+			fmt.Println("Window state: WindowUnmaximize")
 
 		}
 	})
 
-	w.SetContentStateHandler(func(state string) {
+	w.SetContentStateHandler("main", func(state string) {
 		fmt.Printf("[0] document content state: %s\n", state)
 	})
-	go func() {
+	/*go func() {
 		for {
 			time.Sleep(time.Millisecond * 500)
 			if !w.IsExistContentStateHandler() {
@@ -110,7 +109,7 @@ func main() {
 				})
 			}
 		}
-	}()
+	}()*/
 
 	systray.Register(onReady(w))
 	w.SetTitle("Systray Example")
@@ -275,10 +274,10 @@ func onReady(w webview.WebView) func() {
 				case <-mGetPageTitle.ClickedCh:
 					w.Dispatch(func() {
 						w.Navigate("https://golang.org")
-						w.SetContentStateHandler(func(state string) {
+						w.SetContentStateHandler("page-title", func(state string) {
 							if state == "complete" {
 								zenity.Info(w.GetPageTitle(), zenity.Title("Info"), zenity.NoIcon)
-								w.UnSetContentStateHandler()
+								w.UnSetContentStateHandler("page-title")
 							}
 						})
 					})
