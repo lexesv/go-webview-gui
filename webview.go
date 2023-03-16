@@ -7,7 +7,7 @@ package webview
 #cgo darwin CXXFLAGS: -DWEBVIEW_COCOA -std=c++17
 #cgo darwin LDFLAGS: -framework WebKit -framework Cocoa
 
-#cgo windows CXXFLAGS: -DWEBVIEW_EDGE -std=c++17
+#cgo windows CXXFLAGS: -DWEBVIEW_EDGE -std=c++17 -I./windows/include
 #cgo windows LDFLAGS: -static -static-libstdc++ -static-libgcc -ladvapi32 -lole32 -lshell32 -lshlwapi -luser32 -lversion -lGdiplus
 
 #include "webview.h"
@@ -136,7 +136,7 @@ type WebView interface {
 	// SetWindowEventsHandler sets the window status change event handling function
 	// Should be called before calling the "Run" method
 	// Example:
-	// w.SetWindowEventsHandler(func(state webview.WindowState) {
+	// w.SetWindowEventsHandler("test", func(state webview.WindowState) {
 	//		switch state {
 	//		case webview.WindowClose:
 	//			w.Hide()
@@ -148,7 +148,11 @@ type WebView interface {
 	//	})
 	SetWindowEventsHandler(key string, f func(state WindowState))
 
+	// UnSetWindowEventsHandler unsets the window status change event handling function
 	UnSetWindowEventsHandler(key string)
+
+	// IsExistWindowEventsHandler checks if this event handler exists
+	IsExistWindowEventsHandler(key string) bool
 
 	// GetTitle gets the title of the native window.
 	GetTitle() string
@@ -225,7 +229,7 @@ type WebView interface {
 	// SetContentStateHandler sets the document status change event handling function
 	// Should be called before calling the "Run" method
 	// Example:
-	// w.SetContentStateHandler(func(state string) {
+	// w.SetContentStateHandler("test", func(state string) {
 	//		fmt.Printf("document content state: %s\n", state)
 	// })
 	// Status of the document:
@@ -236,9 +240,11 @@ type WebView interface {
 	// complete - Fully loaded
 	SetContentStateHandler(key string, f func(state string))
 
+	// UnSetContentStateHandler unsets the document status change event handling function
 	UnSetContentStateHandler(key string)
 
-	IsExistContentStateHandler() bool
+	// IsExistContentStateHandler checks if this event handler exists
+	IsExistContentStateHandler(key string) bool
 
 	// SetDraggable converts a given DOM element to a draggable region. The user will be able to drag the native window by dragging the given DOM element.
 	// This feature is suitable to make custom window bars along with the borderless mode.
@@ -247,17 +253,16 @@ type WebView interface {
 	// UnSetDraggable converts a draggable region to a normal DOM elements by removing drag event handlers.
 	UnSetDraggable(id string)
 
+	// Just for an example of using the Bind function. See js.go and init.js
 	GetHtml() (s string)
-
 	GetUrl() string
-
 	GetPageTitle() string
 }
 
 type webview struct {
 	w                 C.webview_t
 	Hint              Hint
-	Html, Url, PTitle string
+	data              map[string]interface{}
 	DraggableElements sync.Map
 }
 
@@ -304,6 +309,7 @@ func New(debug, exitOnClose bool) WebView {
 		return nil
 	}
 	w := &webview{w: res}
+	w.data = make(map[string]interface{})
 	events.handle_ws = make(map[string]func(state WindowState))
 	events.handle_cs = make(map[string]func(state string))
 	events.exitOnClose = exitOnClose
@@ -334,11 +340,12 @@ func (w *webview) UnSetWindowEventsHandler(key string) {
 	delete(events.handle_ws, key)
 }
 
-func (w *webview) IsExistWindowEventsHandler() bool {
-	if events.handle_ws == nil {
-		return false
+func (w *webview) IsExistWindowEventsHandler(key string) bool {
+	_, ok := events.handle_ws[key]
+	if ok {
+		return true
 	}
-	return true
+	return false
 }
 
 func (w *webview) Terminate() {
@@ -543,11 +550,12 @@ func (w *webview) UnSetContentStateHandler(key string) {
 	delete(events.handle_cs, key)
 }
 
-func (w *webview) IsExistContentStateHandler() bool {
-	if events.handle_cs == nil {
-		return false
+func (w *webview) IsExistContentStateHandler(key string) bool {
+	_, ok := events.handle_cs[key]
+	if ok {
+		return true
 	}
-	return true
+	return false
 }
 
 func (w *webview) SetDraggable(id string) {
@@ -559,15 +567,24 @@ func (w *webview) UnSetDraggable(id string) {
 }
 
 func (w *webview) GetHtml() string {
-	return w.Html
+	if _, ok := w.data["html"]; !ok {
+		return ""
+	}
+	return w.data["html"].(string)
 }
 
 func (w *webview) GetPageTitle() string {
-	return w.PTitle
+	if _, ok := w.data["title"]; !ok {
+		return ""
+	}
+	return w.data["title"].(string)
 }
 
 func (w *webview) GetUrl() string {
-	return w.Url
+	if _, ok := w.data["url"]; !ok {
+		return ""
+	}
+	return w.data["url"].(string)
 }
 
 func (w *webview) Dispatch(f func()) {

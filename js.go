@@ -27,15 +27,15 @@ func (w *webview) initJSFunc() {
 	})
 
 	w.Bind("getUrl", func(s string) {
-		w.Url = s
+		w.data["url"] = s
 	})
 
 	w.Bind("getHtml", func(s string) {
-		w.Html = s
+		w.data["html"] = s
 	})
 
 	w.Bind("getPageTitle", func(s string) {
-		w.PTitle = s
+		w.data["title"] = s
 	})
 
 	w.Bind("move", func(x, y int) {

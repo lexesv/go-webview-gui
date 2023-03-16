@@ -1529,23 +1529,7 @@ using browser_engine = detail::cocoa_wkwebview_engine;
 #include <windows.h>
 #include <gdiplus.h>
 
-// Selects whether to use embedded headers for the WebView2 library or external headers.
-// - Don't include embedded header if WEBVIEW_NO_EMBEDDED_WEBVIEW2 is defined.
-// - Include embedded header if it can be detected (convenience for MinGW-w64/GCC).
-// - Include embedded header if WEBVIEW_USE_EMBEDDED_WEBVIEW2 i defined.
-// - Include external header if embedded header has not been included.
-#if !defined(WEBVIEW_NO_EMBEDDED_WEBVIEW2)
-#if defined(__has_include)
-#if __has_include("libs/mswebview2/versions/auto.h")
-#include "libs/mswebview2/versions/auto.h"
-#endif
-#elif defined(WEBVIEW_USE_EMBEDDED_WEBVIEW2)
-#include "libs/mswebview2/versions/auto.h"
-#endif
-#endif
-#ifndef __webview2_h__
 #include "WebView2.h"
-#endif
 
 #ifdef _MSC_VER
 #pragma comment (lib,"Gdiplus.lib")
@@ -1556,6 +1540,10 @@ using browser_engine = detail::cocoa_wkwebview_engine;
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "version.lib")
 #endif
+
+#ifdef __CRT_UUID_DECL
+__CRT_UUID_DECL(ICoreWebView2Settings2, 0xee9a0f68, 0xf46c, 0x4e32, 0xac, 0x23, 0xef, 0x8c, 0xac, 0x22, 0x4d, 0x2a);
+#endif //__CRT_UUID_DECL
 
 namespace webview {
 namespace detail {
@@ -1906,8 +1894,10 @@ static constexpr IID
         0x4F,       0xEE,   0x6C,   0xC1, 0x4D};
 static constexpr IID IID_ICoreWebView2PermissionRequestedEventHandler{
     0x15E1C6A3, 0xC72A, 0x4DF3, 0x91, 0xD7, 0xD0, 0x97, 0xFB, 0xEC, 0x6B, 0xFD};
+
 static constexpr IID IID_ICoreWebView2WebMessageReceivedEventHandler{
     0x57213F19, 0x00E6, 0x49FA, 0x8E, 0x07, 0x89, 0x8E, 0xA0, 0x1E, 0xCB, 0xD2};
+
 
 #if WEBVIEW_MSWEBVIEW2_BUILTIN_IMPL == 1
 enum class webview2_runtime_type { installed = 0, embedded = 1 };
@@ -2156,6 +2146,7 @@ static constexpr auto message_received =
 static constexpr auto permission_requested =
     cast_info_t<ICoreWebView2PermissionRequestedEventHandler>{
         IID_ICoreWebView2PermissionRequestedEventHandler};
+
 } // namespace cast_info
 } // namespace mswebview2
 
@@ -2205,7 +2196,7 @@ public:
     if (cast_if_equal_iid(riid, controller_completed, ppv) ||
         cast_if_equal_iid(riid, environment_completed, ppv) ||
         cast_if_equal_iid(riid, message_received, ppv) ||
-        cast_if_equal_iid(riid, permission_requested, ppv)) {
+        cast_if_equal_iid(riid, permission_requested, ppv) ) {
       return S_OK;
     }
 
@@ -2543,12 +2534,14 @@ public:
   }
 
   void set_user_agent(const std::string &ua) {
-    /*ICoreWebView2Settings2 *settings = nullptr;
+    ICoreWebView2Settings *settings = nullptr;
     auto res = m_webview->get_Settings(&settings);
     if (res != S_OK) {
        return;
     }
-    settings->put_UserAgent(widen_string(ua).c_str());*/
+    ICoreWebView2Settings2 *settings2 = nullptr;
+    settings->QueryInterface(&settings2);
+    settings2->put_UserAgent(widen_string(ua).c_str());
   }
 
   void set_bordered(int hints) {
