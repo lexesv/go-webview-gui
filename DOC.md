@@ -9,6 +9,7 @@ import "github.com/lexesv/go-webview-gui"
 ## Index
 
 - [Constants](<#constants>)
+- [Variables](<#variables>)
 - [type Hint](<#type-hint>)
 - [type WebView](<#type-webview>)
   - [func New(debug, exitOnClose bool) WebView](<#func-new>)
@@ -21,24 +22,33 @@ import "github.com/lexesv/go-webview-gui"
 const (
     // Width and height are default size
     HintNone = C.WEBVIEW_HINT_NONE
-
     // Window size can not be changed by a user
     HintFixed = C.WEBVIEW_HINT_FIXED
-
     // Width and height are minimum bounds
     HintMin = C.WEBVIEW_HINT_MIN
-
     // Width and height are maximum bounds
     HintMax = C.WEBVIEW_HINT_MAX
 
-    WindowClose      = C.WEBVIEW_WINDOW_CLOSE      // 0
-    WindowFocus      = C.WEBVIEW_WINDOW_FOCUS      // 1
-    WindowBlur       = C.WEBVIEW_WINDOW_BLUR       // 2
-    WindowMove       = C.WEBVIEW_WINDOW_MOVE       // 4
-    WindowResize     = C.WEBVIEW_WINDOW_RESIZE     // 5
-    WindowFullScreen = C.WEBVIEW_WINDOW_FULLSCREEN // 3   // GTK only
-    WindowUndefined  = C.WEBVIEW_WINDOW_UNDEFINED  // 100 // GTK only
+    //--------------------------------------------------------- MacOS Linux Windows
+    WindowClose          = C.WEBVIEW_WINDOW_CLOSE          // 0   +     +     +
+    WindowFocus          = C.WEBVIEW_WINDOW_FOCUS          // 1   +     +     +
+    WindowBlur           = C.WEBVIEW_WINDOW_BLUR           // 2   +     +     +
+    WindowMove           = C.WEBVIEW_WINDOW_MOVE           // 3   +     +     +
+    WindowResize         = C.WEBVIEW_WINDOW_RESIZE         // 4   +     +     +
+    WindowFullScreen     = C.WEBVIEW_WINDOW_FULLSCREEN     // 5   +     +     +
+    WindowExitFullScreen = C.WEBVIEW_WINDOW_EXITFULLSCREEN // 6   +     +     +
+    WindowMaximize       = C.WEBVIEW_WINDOW_MAXIMIZE       // 7   -     +     +
+    WindowUnmaximize     = C.WEBVIEW_WINDOW_UNMAXIMIZE     // 8   -     +     -
+    WindowMinimize       = C.WEBVIEW_WINDOW_MINIMIZE       // 9   +     +     +
+    WindowUnminimize     = C.WEBVIEW_WINDOW_UNMINIMIZE     // 10  +     +     -
+
 )
+```
+
+## Variables
+
+```go
+var EF embed.FS
 ```
 
 ## type Hint
@@ -79,9 +89,6 @@ type WebView interface {
     // thread.
     SetTitle(title string)
 
-    // SetUserAgent sets a custom user agent string for the webview.
-    SetUserAgent(userAgent string)
-
     // SetSize updates native window size. See Hint constants.
     SetSize(w int, h int, hint Hint)
 
@@ -97,7 +104,7 @@ type WebView interface {
     SetHtml(html string)
 
     // Init injects JavaScript code at the initialization of the new page. Every
-    // time the webview will open a the new page - this initialization code will
+    // time the webview will open a new page - this initialization code will
     // be executed. It is guaranteed that code is executed before window.onload.
     Init(js string)
 
@@ -116,10 +123,13 @@ type WebView interface {
     // f must return either value and error or just error
     Bind(name string, f interface{}) error
 
-    // SetWindowEventsHandler sets the event handling function
+    // SetUserAgent sets a custom user agent string for the webview.
+    SetUserAgent(userAgent string)
+
+    // SetWindowEventsHandler sets the window status change event handling function
     // Should be called before calling the "Run" method
     // Example:
-    // w.SetWindowEventsHandler(func(state webview.WindowState) {
+    // w.SetWindowEventsHandler("test", func(state webview.WindowState) {
     //		switch state {
     //		case webview.WindowClose:
     //			w.Hide()
@@ -129,7 +139,13 @@ type WebView interface {
     //			// Example: save window position for restore in next launch
     //		}
     //	})
-    SetWindowEventsHandler(f func(state WindowState))
+    SetWindowEventsHandler(key string, f func(state WindowState))
+
+    // UnSetWindowEventsHandler unsets the window status change event handling function
+    UnSetWindowEventsHandler(key string)
+
+    // IsExistWindowEventsHandler checks if this event handler exists
+    IsExistWindowEventsHandler(key string) bool
 
     // GetTitle gets the title of the native window.
     GetTitle() string
@@ -154,6 +170,10 @@ type WebView interface {
 
     // Unmaximize unmaximizes the native window.
     Unmaximize()
+
+    // IsMinimized If the native window is minimized it returns true, otherwise false.
+    // IsMinimized Does not work with Stage Manager (MacOS)
+    IsMinimized() bool
 
     // Minimize minimizes the native window.
     Minimize()
@@ -198,6 +218,38 @@ type WebView interface {
 
     // Focus set the focus on the native window.
     Focus()
+
+    // SetContentStateHandler sets the document status change event handling function
+    // Should be called before calling the "Run" method
+    // Example:
+    // w.SetContentStateHandler("test", func(state string) {
+    //		fmt.Printf("document content state: %s\n", state)
+    // })
+    // Status of the document:
+    // uninitialized - Has not started loading
+    // loading - Is loading
+    // loaded - Has been loaded
+    // interactive - Has loaded enough to interact with
+    // complete - Fully loaded
+    SetContentStateHandler(key string, f func(state string))
+
+    // UnSetContentStateHandler unsets the document status change event handling function
+    UnSetContentStateHandler(key string)
+
+    // IsExistContentStateHandler checks if this event handler exists
+    IsExistContentStateHandler(key string) bool
+
+    // SetDraggable converts a given DOM element to a draggable region. The user will be able to drag the native window by dragging the given DOM element.
+    // This feature is suitable to make custom window bars along with the borderless mode.
+    SetDraggable(id string)
+
+    // UnSetDraggable converts a draggable region to a normal DOM elements by removing drag event handlers.
+    UnSetDraggable(id string)
+
+    // Just for an example of using the Bind function. See js.go and init.js
+    GetHtml() (s string)
+    GetUrl() string
+    GetPageTitle() string
 }
 ```
 

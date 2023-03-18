@@ -2540,7 +2540,10 @@ public:
        return;
     }
     ICoreWebView2Settings2 *settings2 = nullptr;
-    settings->QueryInterface(&settings2);
+    res = settings->QueryInterface(&settings2);
+    if (res != S_OK) {
+       return;
+    }
     settings2->put_UserAgent(widen_string(ua).c_str());
   }
 
