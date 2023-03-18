@@ -9,9 +9,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	"github.com/kardianos/osext"
 	"github.com/lexesv/go-webview-gui"
+	"github.com/lexesv/go-webview-gui/dialog"
 	"github.com/lexesv/go-webview-gui/systray"
 	"github.com/ncruces/zenity"
 )
@@ -48,6 +50,10 @@ func main() {
 	iconData, err = EF.ReadFile("icon.png")
 	if err != nil {
 		panic(err)
+	}
+
+	if !zenity.IsAvailable() {
+		dialog.Message("Zenity is not installed.").Info()
 	}
 
 	// See NewInstance function
@@ -98,18 +104,8 @@ func main() {
 	})
 
 	w.SetContentStateHandler("main", func(state string) {
-		fmt.Printf("[0] document content state: %s\n", state)
+		fmt.Printf("document content state: %s\n", state)
 	})
-	/*go func() {
-		for {
-			time.Sleep(time.Millisecond * 500)
-			if !w.IsExistContentStateHandler() {
-				w.SetContentStateHandler(func(state string) {
-					fmt.Printf("[1] document content state: %s\n", state)
-				})
-			}
-		}
-	}()*/
 
 	systray.Register(onReady(w))
 	w.SetTitle("Systray Example")
@@ -184,14 +180,12 @@ func onReady(w webview.WebView) func() {
 					w.Terminate()
 					os.Exit(1)
 				case <-mShowTitle.ClickedCh:
-					zenity.Info(w.GetTitle(), zenity.Title("Info"), zenity.NoIcon)
-					w.Dispatch(func() {
-						w.Focus() //
-					})
+					zenity.Info(w.GetTitle(), zenity.Title("Info"), zenity.NoIcon, GetAttachId())
 				case <-mGetSizePosition.ClickedCh:
 					width, height, hint := w.GetSize()
 					x, y := w.GetPosition()
-					zenity.Info(fmt.Sprintf("Size:%dx%d %v. \nPosition: X:%d Y:%d", width, height, hint, x, y), zenity.Title("Info"), zenity.NoIcon)
+					zenity.Info(fmt.Sprintf("Size:%dx%d %v. \nPosition: X:%d Y:%d", width, height, hint, x, y), zenity.Title("Info"),
+						zenity.NoIcon, GetAttachId())
 				case <-mHide.ClickedCh:
 					w.Dispatch(func() {
 						w.Hide()
@@ -266,17 +260,17 @@ func onReady(w webview.WebView) func() {
 						w.SetBordered()
 					})
 				case <-mGetHtml.ClickedCh:
-					zenity.Info(w.GetHtml(), zenity.Title("Info"), zenity.NoIcon)
+					zenity.Info(w.GetHtml(), zenity.Title("Info"), zenity.NoIcon, GetAttachId())
 
 				case <-mGetUrl.ClickedCh:
-					zenity.Info(w.GetUrl(), zenity.Title("Info"), zenity.NoIcon)
+					zenity.Info(w.GetUrl(), zenity.Title("Info"), zenity.NoIcon, GetAttachId())
 
 				case <-mGetPageTitle.ClickedCh:
 					w.Dispatch(func() {
 						w.Navigate("https://golang.org")
 						w.SetContentStateHandler("page-title", func(state string) {
 							if state == "complete" {
-								zenity.Info(w.GetPageTitle(), zenity.Title("Info"), zenity.NoIcon)
+								zenity.Info(w.GetPageTitle(), zenity.Title("Info"), zenity.NoIcon, GetAttachId())
 								w.UnSetContentStateHandler("page-title")
 							}
 						})
@@ -303,7 +297,7 @@ func onReady(w webview.WebView) func() {
 					}()*/
 
 					if err := cmd.Start(); err != nil {
-						zenity.Error(err.Error(), zenity.Title("Error"), zenity.ErrorIcon)
+						zenity.Error(err.Error(), zenity.Title("Error"), zenity.ErrorIcon, GetAttachId())
 					} else {
 						ChildWindows = append(ChildWindows, cmd)
 					}
@@ -318,4 +312,24 @@ func KillChildWindows() {
 	for _, w := range ChildWindows {
 		w.Process.Kill()
 	}
+}
+
+// GetAttachId This function is required only on Linux operating systems.
+// On Linux zenity does not return focus to parent window
+// For other systems, this is just a fake implementation
+//
+//	var wid interface{}
+//	switch runtime.GOOS {
+//	case "linux":
+//		wid = os.Getpid()
+//	case "darwin":
+//		wid = os.Getpid() // or example "My.app".
+//	case "windows":
+//		wid = uintptr(w.Window())
+//	}
+func GetAttachId() zenity.Option {
+	if runtime.GOOS == "linux" {
+		return zenity.Attach(os.Getpid())
+	}
+	return zenity.Modal()
 }
