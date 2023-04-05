@@ -225,6 +225,11 @@ WEBVIEW_API void webview_focus(webview_t w);
 WEBVIEW_API void webview_set_event_handler(void (*f)(int));
 
 
+/*
+WEBVIEW_API int webview_get_window_id(webview_t w);
+WEBVIEW_API void webview_set_window_modal(webview_t w, int xid);
+*/
+
 // Binds a native C callback so that it will appear under the given name as a
 // global JavaScript function. Internally it uses webview_init(). Callback
 // receives a request string and a user-provided argument pointer. Request
@@ -582,6 +587,7 @@ inline std::string json_parse(const std::string &s, const std::string &key,
 //
 #include <JavaScriptCore/JavaScript.h>
 #include <gtk/gtk.h>
+#include <gdk/gdkx.h>
 #include <webkit2/webkit2.h>
 bool isGtkWindowFullscreen;
 bool isGtkWindowMinimized;
@@ -857,6 +863,27 @@ public:
   void focus(){
     gtk_window_present(GTK_WINDOW(m_window));
   }
+
+/*
+  int get_window_id(){
+    //GdkWindow *gwin = gtk_widget_get_window(GTK_WIDGET(m_window));
+    return gdk_x11_window_get_xid(gtk_widget_get_window(GTK_WIDGET(m_window)));
+  }
+
+  void set_window_modal (int xid){
+    GList     *toplevels, *l;
+    toplevels = gtk_window_list_toplevels();
+    GtkWindow *parent;
+  	for (l = toplevels; l != NULL; l = l->next){
+  	    printf("xid = %d\n",gdk_x11_window_get_xid( gtk_widget_get_window(GTK_WIDGET(l->data)) ));
+        if (gdk_x11_window_get_xid( gtk_widget_get_window(GTK_WIDGET(l->data)) ) == xid) {  //GDK_WINDOW(l->data)
+            parent = GTK_WINDOW(l->data);
+            //printf("%d",xid);
+        }
+  	}
+  	g_list_free(toplevels);
+    //gtk_window_set_transient_for(GTK_WINDOW(m_window), parent);
+  }*/
 
 
 private:
@@ -3047,6 +3074,16 @@ WEBVIEW_API void webview_move(webview_t w, int x, int y){
 WEBVIEW_API void webview_focus(webview_t w){
      static_cast<webview::webview *>(w)->focus();
 }
+
+/*
+WEBVIEW_API int webview_get_window_id(webview_t w){
+     return static_cast<webview::webview *>(w)->get_window_id();
+}
+WEBVIEW_API void webview_set_window_modal(webview_t w, int xid){
+     return static_cast<webview::webview *>(w)->set_window_modal(xid);
+}
+*/
+
 
 WEBVIEW_API void webview_bind(webview_t w, const char *name,
                               void (*fn)(const char *seq, const char *req,
