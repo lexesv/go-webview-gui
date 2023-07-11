@@ -55,6 +55,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
+document.addEventListener('keydown', (event) => {
+
+        // Ctrl+C or Cmd+C pressed
+        if ((event.ctrlKey || event.metaKey) && event.keyCode === 67) {
+            console.log("copy");
+            document.execCommand("copy");
+        }
+
+        // Ctrl+V or Cmd+V pressed
+        if ((event.ctrlKey || event.metaKey) && event.keyCode === 86) {
+            console.log("paste");
+            document.execCommand("paste");
+        }
+
+        // Ctrl+X or Cmd+X pressed
+        if ((event.ctrlKey || event.metaKey) && event.keyCode === 88) {
+            console.log("cut");
+            document.execCommand("cut");
+        }
+
+
+});
+
 function __awaiter(thisArg, _arguments, P, generator) {
     function adopt(value) {
         return value instanceof P ? value : new P(function (resolve) {

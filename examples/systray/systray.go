@@ -28,7 +28,7 @@ type App_ struct {
 var (
 	iconData     []byte
 	App          = &App_{}
-	html         = `Thanks for using Golang Webview GUI!`
+	html         = `Thanks for using Golang Webview GUI!<br><br><input type="text" width='75%'>`
 	ChildWindows []*exec.Cmd
 )
 

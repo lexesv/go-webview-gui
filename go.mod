@@ -14,6 +14,7 @@ require (
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/sqweek/dialog v0.0.0-20220809060634-e981b270ebbf
 	github.com/webview/webview v0.0.0-20230210061304-7b40e46d97e9
+	golang.org/x/image v0.4.0
 	golang.org/x/sys v0.6.0
 )
 
@@ -34,6 +35,5 @@ require (
 	github.com/josephspurrier/goversioninfo v1.4.0 // indirect
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 	github.com/randall77/makefat v0.0.0-20210315173500-7ddd0e42c844 // indirect
-	golang.org/x/image v0.4.0 // indirect
 	golang.org/x/net v0.8.0 // indirect
 )

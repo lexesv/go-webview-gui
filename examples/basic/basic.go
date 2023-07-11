@@ -12,7 +12,7 @@ func main() {
 	w := webview.New(true, true)
 	defer w.Destroy()
 
-	w.SetWindowEventsHandler(EventHandler)
+	w.SetWindowEventsHandler("main", EventHandler)
 
 	w.SetTitle("Basic Example")
 	err := w.SetIcon("../asset/icon.png")
