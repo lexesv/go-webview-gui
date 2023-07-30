@@ -12,8 +12,7 @@ import (
 	"runtime"
 
 	"github.com/kardianos/osext"
-	"github.com/lexesv/go-webview-gui"
-	"github.com/lexesv/go-webview-gui/dialog"
+	//"github.com/lexesv/go-webview-gui/dialog"
 	"github.com/lexesv/go-webview-gui/systray"
 	"github.com/ncruces/zenity"
 )
