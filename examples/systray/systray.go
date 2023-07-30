@@ -13,8 +13,8 @@ import (
 
 	"github.com/kardianos/osext"
 	webview "github.com/lexesv/go-webview-gui"
-	"github.com/lexesv/go-webview-gui/dialog"
-	"github.com/lexesv/go-webview-gui/systray"
+	"github.com/lexesv/go-webview-gui/pkg/dialog"
+	"github.com/lexesv/go-webview-gui/pkg/systray"
 	"github.com/ncruces/zenity"
 )
 
