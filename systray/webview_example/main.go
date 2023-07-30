@@ -1,10 +1,8 @@
 package main
 
 import (
-	"github.com/webview/webview"
-
-	"github.com/ghostiam/systray"
-	"github.com/ghostiam/systray/example/icon"
+	"github.com/lexesv/go-webview-gui/systray"
+	"github.com/lexesv/go-webview-gui/systray/example/icon"
 )
 
 func main() {
