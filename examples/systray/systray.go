@@ -164,6 +164,7 @@ func onReady(w webview.WebView) func() {
 			mGetHtml := systray.AddMenuItem("GetHtml", "")
 			mGetUrl := systray.AddMenuItem("GetUrl", "")
 			mGetPageTitle := systray.AddMenuItem("GetPageTitle", "")
+			mOpenBrowser := systray.AddMenuItem("Open google.com", "")
 			systray.AddSeparator()
 			mNewWindow := systray.AddMenuItem("New Window", "")
 			systray.AddSeparator()
@@ -275,6 +276,9 @@ func onReady(w webview.WebView) func() {
 							}
 						})
 					})
+
+				case <-mOpenBrowser.ClickedCh:
+					w.OpenUrlInBrowser("https://google.com")
 
 				case <-mNewWindow.ClickedCh:
 					p := []string{

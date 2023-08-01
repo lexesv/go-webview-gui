@@ -24,7 +24,9 @@ import "C"
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
+	"os/exec"
 	"reflect"
 	"runtime"
 	"sync"
@@ -250,6 +252,9 @@ type WebView interface {
 
 	// UnSetDraggable converts a draggable region to a normal DOM elements by removing drag event handlers.
 	UnSetDraggable(id string)
+
+	// OpenUrlInBrowser Opens the specified link in the web browser
+	OpenUrlInBrowser(url string) (err error)
 
 	// Just for an example of using the Bind function. See js.go and init.js
 	GetHtml() (s string)
@@ -583,6 +588,20 @@ func (w *webview) GetUrl() string {
 		return ""
 	}
 	return w.data["url"].(string)
+}
+
+func (w *webview) OpenUrlInBrowser(url string) (err error) {
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "windows":
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+	return err
 }
 
 func (w *webview) Dispatch(f func()) {
