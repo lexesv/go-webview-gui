@@ -110,7 +110,7 @@ set CGO_CXXFLAGS="-I%cd%\libs\webview2\build\native\include"
 Save the basic Go example into your project directory:
 
 ```sh
-curl -sSLo basic.go "https://raw.githubusercontent.com/lexesv/go-webview-gui/main/examples/basic.go"
+curl -sSLo basic.go "https://raw.githubusercontent.com/lexesv/go-webview-gui/main/examples/basic/basic.go"
 ```
 
 Install dependencies:
